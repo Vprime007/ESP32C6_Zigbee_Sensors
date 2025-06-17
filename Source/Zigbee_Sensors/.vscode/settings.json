@@ -9,5 +9,10 @@
   "idf.toolsPathWin": "C:\\Users\\vmblanchard\\.espressif",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32c6"
+  },
+  "files.associations": {
+    "esp_system.h": "c",
+    "buttoncontroller.h": "c",
+    "stdbool.h": "c"
   }
 }
