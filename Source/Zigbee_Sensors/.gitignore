@@ -1,0 +1,11 @@
+build/
+sdkconfig.old
+FetchContentCache
+managed_components/
+.svn
+*.lock
+*.bak
+
+* text=auto eol=lf
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf
