@@ -1,5 +1,5 @@
-#ifndef _BUTTON_CONTROLLER_H
-#define _BUTTON_CONTROLLER_H
+#ifndef _LED_CONTROLLER_H
+#define _LED_CONTROLLER_H
 
 #include <stdint.h>
 
@@ -16,25 +16,22 @@
 /******************************************************************************
 *   Public Data Types
 *******************************************************************************/
-typedef void(*ShortpressCallback_t)(void);
-typedef void(*LongpressCallback_t)(void);
+typedef enum LED_Pattern_e{
+    LED_PATTERN_BOOT,
+    LED_PATTERN_FACTORY_RESET,
+    LED_PATTERN_IDENTIFY,
 
-typedef enum BUTTON_Active_Level_e{
-    BUTTON_ACTIVE_LOW,
-    BUTTON_ACTIVE_HIGH,
-}BUTTON_Active_Level_t;
+    LED_PATTERN_CONNECTED,
+    LED_PATTERN_NOT_CONNECTED,
+    LED_PATTERN_NO_COORDO,
 
-typedef struct BUTTON_Config_s{
-    uint8_t gpio;
-    BUTTON_Active_Level_t active_level;
-    ShortpressCallback_t shortpress_callback;
-    LongpressCallback_t longpress_callback;
-}BUTTON_Config_t;
+    LED_PATTERN_INVALID,
+}LED_Pattern_t;
 
-typedef enum BUTTON_Ret_e{
-    BUTTON_STATUS_ERROR,
-    BUTTON_STATUS_OK,
-}BUTTON_Ret_t;
+typedef enum LED_Ret_e{
+    LED_STATUS_ERROR,
+    LED_STATUS_OK,
+}LED_Ret_t;
 
 /******************************************************************************
 *   Public Variables
@@ -49,7 +46,10 @@ typedef enum BUTTON_Ret_e{
 /******************************************************************************
 *   Public Functions
 *******************************************************************************/
-BUTTON_Ret_t BUTTON_InitController(BUTTON_Config_t *pConfig);
+LED_Ret_t LED_InitController(uint8_t led_strip_gpio);
 
+LED_Ret_t LED_StartPattern(LED_Pattern_t pattern);
 
-#endif//_BUTTON_CONTROLLER_H
+LED_Ret_t LED_StopPattern(LED_Pattern_t pattern);
+
+#endif//_LED_CONTROLLER_H
