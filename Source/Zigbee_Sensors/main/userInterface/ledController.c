@@ -145,6 +145,12 @@ LED_Ret_t LED_StartPattern(LED_Pattern_t pattern){
         }
         break;
 
+        case LED_PATTERN_SCANNING:
+        {
+            ESP_LOGI(TAG, "Starting Scanning pattern");
+        }
+        break;
+
         case LED_PATTERN_INVALID:
         default:
         {
@@ -163,18 +169,6 @@ LED_Ret_t LED_StopPattern(LED_Pattern_t pattern){
     }
 
     switch(pattern){
-
-        case LED_PATTERN_BOOT:
-        {
-            ESP_LOGI(TAG, "Stopping Boot pattern");
-        }
-        break;
-
-        case LED_PATTERN_FACTORY_RESET:
-        {
-            ESP_LOGI(TAG, "Stopping Factory Reset pattern");
-        }
-        break;
 
         case LED_PATTERN_IDENTIFY:
         {
@@ -197,6 +191,12 @@ LED_Ret_t LED_StopPattern(LED_Pattern_t pattern){
         case LED_PATTERN_NO_COORDO:
         {
             ESP_LOGI(TAG, "Stopping No-Coordo pattern");
+        }
+        break;
+
+        case LED_PATTERN_SCANNING:
+        {
+            ESP_LOGI(TAG, "Stopping Scanning pattern");
         }
         break;
 

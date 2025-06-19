@@ -26,6 +26,9 @@ typedef enum UI_Event_e{
     UI_EVENT_NO_CONNECTED,
     UI_EVENT_NO_COORDO,
 
+    UI_EVENT_BTN_SHORTPRESS,
+    UI_EVENT_BTN_LONGPRESS,
+
     UI_EVENT_INVALID,
 }UI_Event_t;
 

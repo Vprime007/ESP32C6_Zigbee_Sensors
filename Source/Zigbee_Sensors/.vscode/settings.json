@@ -13,6 +13,9 @@
   "files.associations": {
     "esp_system.h": "c",
     "buttoncontroller.h": "c",
-    "stdbool.h": "c"
+    "stdbool.h": "c",
+    "esp_log.h": "c",
+    "button_gpio.h": "c",
+    "stdint.h": "c"
   }
 }
