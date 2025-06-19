@@ -48,6 +48,20 @@ static const char * TAG = "BUTTON";
 /******************************************************************************
 *   Public Functions Definitions
 *******************************************************************************/
+/***************************************************************************//*!
+*  \brief Button controller initialization.
+*
+*   This function perform the Button Controller module initialization.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  pConfig             Pointer to button configuration.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
 BUTTON_Ret_t BUTTON_InitController(BUTTON_Config_t const *pConfig){
 
     ESP_LOGI(TAG, "Controller initialization");
