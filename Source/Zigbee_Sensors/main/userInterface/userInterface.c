@@ -52,22 +52,61 @@ static const char * TAG = "UI";
 /******************************************************************************
 *   Private Functions Definitions
 *******************************************************************************/
+/***************************************************************************//*!
+*  \brief Shortpress callback.
+*
+*   Function called when button shortpress is detected.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  args
+*   \param[in]  user_data
+*
+*******************************************************************************/
 static void shortpressCallback(void *args, void *user_data){
 
     UI_PostEvent(UI_EVENT_BTN_SHORTPRESS, 0);
 }
 
+/***************************************************************************//*!
+*  \brief Longpress callback.
+*
+*   Function called when button longpress is detected.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  args
+*   \param[in]  user_data
+*
+*******************************************************************************/
 static void longpressCallback(void *args, void *user_data){
 
     UI_PostEvent(UI_EVENT_BTN_LONGPRESS, 0);
 }
 
+/***************************************************************************//*!
+*  \brief User Interface main task.
+*
+*   User Interface main task function.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  pvParameters    
+*
+*******************************************************************************/
 static void tUiTask(void *pvParameters){
 
     UI_Event_t ui_event;
     ESP_LOGI(TAG, "Starting UI task");
 
     for(;;){
+
         if(pdTRUE == xQueueReceive(ui_event_queue_handle, 
                                    &ui_event, 
                                    (UI_QUEUE_RECV_TIMEOUT_MS/portTICK_PERIOD_MS))){
@@ -76,55 +115,55 @@ static void tUiTask(void *pvParameters){
 
                 case UI_EVENT_BOOT:
                 {
-
+                    ESP_LOGI(TAG, "Processing BOOT event");
                 }
                 break;
 
                 case UI_EVENT_FACTORY_RESET:
                 {
-
+                    ESP_LOGI(TAG, "Processing FACTORY_RESET event");
                 }
                 break;
 
                 case UI_EVENT_IDENTIFY:
                 {
-
+                    ESP_LOGI(TAG, "Processing IDENTIFY event");
                 }
                 break;
 
                 case UI_EVENT_BTN_SHORTPRESS:
                 {
-
+                    ESP_LOGI(TAG, "Processing SHORTPRESS event");
                 }
                 break;
 
                 case UI_EVENT_BTN_LONGPRESS:
                 {
-
+                    ESP_LOGI(TAG, "Processing LONGPRESS event");
                 }
                 break;
 
                 case UI_EVENT_CONNECTED:
                 {
-
+                    ESP_LOGI(TAG, "Processing CONNECTED event");
                 }
                 break;
 
-                case UI_EVENT_NO_CONNECTED:
+                case UI_EVENT_NOT_CONNECTED:
                 {
-
+                    ESP_LOGI(TAG, "Processing NOT_CONNECTED event");
                 }
                 break;
 
                 case UI_EVENT_NO_COORDO:
                 {
-
+                    ESP_LOGI(TAG, "Processing NO_COORDO event");
                 }
                 break;
 
                 case UI_EVENT_SCANNING:
                 {
-
+                    ESP_LOGI(TAG, "Processing SCANNING event");
                 }
                 break;
 
@@ -143,6 +182,18 @@ static void tUiTask(void *pvParameters){
 
 /******************************************************************************
 *   Public Functions Definitions
+*******************************************************************************/
+/***************************************************************************//*!
+*  \brief User Interface initialization.
+*
+*   This function perform the User Interface module initialization.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \return     Operation status
+*
 *******************************************************************************/
 UI_Ret_t UI_Init(void){
 
@@ -182,6 +233,22 @@ UI_Ret_t UI_Init(void){
     return UI_STATUS_OK;
 }
 
+/***************************************************************************//*!
+*  \brief Post user interface event.
+*
+*   This function post a user interface event. You can specify a timeout to
+*   post the event. If no timeout is needed, set wait_ms to zero.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  event               UI event.
+*   \param[in]  wait_ms             Post timeout in ms.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
 UI_Ret_t UI_PostEvent(UI_Event_t event, uint32_t wait_ms){
 
     if(ui_event_queue_handle == NULL){

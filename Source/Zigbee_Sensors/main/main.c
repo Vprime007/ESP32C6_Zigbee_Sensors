@@ -9,15 +9,17 @@
 *******************************************************************************/
 #include <stdio.h>
 #include <inttypes.h>
+
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
 #include "esp_chip_info.h"
 #include "esp_flash.h"
 #include "esp_system.h"
 #include "esp_log.h"
 
-#include "driver/gpio.h"
+#include "userInterface.h"
 
 /******************************************************************************
 *   Private Definitions
@@ -37,7 +39,7 @@
 /******************************************************************************
 *   Private Functions Declaration
 *******************************************************************************/
-
+static void tMainTask(void *pvParameters);
 
 /******************************************************************************
 *   Public Variables
@@ -47,7 +49,9 @@
 /******************************************************************************
 *   Private Variables
 *******************************************************************************/
+static TaskHandle_t main_task_handle = NULL;
 
+static const char * TAG = "MAIN";
 
 /******************************************************************************
 *   Private Functions Definitions
@@ -88,8 +92,48 @@ void app_main(void){
            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
+
+    //Create main task
+    if(pdTRUE != xTaskCreate(tMainTask,
+                             "Main task",
+                             2048,
+                             NULL,
+                             4,
+                             &main_task_handle)){
+
+        ESP_LOGI(TAG, "Failed to create main task");
+        while(1);
+    }
 }
 
+/***************************************************************************//*!
+*  \brief Main task.
+*
+*   Main task.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  pvParameters
+*
+*******************************************************************************/
+static void tMainTask(void *pvParameters){
+
+    ESP_LOGI(TAG, "Starting Main task");
+
+    //Init User Interface
+    if(UI_STATUS_OK != UI_Init()){
+        ESP_LOGI(TAG, "Failed to init UI");
+    }
+
+    for(;;){
+
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+    }
+
+    vTaskDelete(NULL);
+}
 
 /******************************************************************************
 *   Public Functions Definitions
