@@ -6,6 +6,9 @@ idf_component_register(
                         "userInterface/ledController.c"
 
                         "network/zigbeeManager.c"
+                        "network/basicCluster.c"
+                        "network/tempMeasCluster.c"
+                        "network/humidityMeasCluster.c"
 
     INCLUDE_DIRS        ""
                         "userInterface"

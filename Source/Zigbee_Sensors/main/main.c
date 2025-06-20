@@ -19,6 +19,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 
+#include "zigbeeManager.h"
 #include "userInterface.h"
 
 /******************************************************************************

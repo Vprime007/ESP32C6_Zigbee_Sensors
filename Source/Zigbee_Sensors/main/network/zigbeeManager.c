@@ -12,6 +12,9 @@
 #include "esp_log.h"
 
 #include "zigbeeManager.h"
+#include "basicCluster.h"
+#include "tempMeasCluster.h"
+#include "humidityMeasCluster.h"
 
 /******************************************************************************
 *   Private Definitions
