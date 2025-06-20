@@ -5,11 +5,13 @@ idf_component_register(
                         "userInterface/buttonController.c"
                         "userInterface/ledController.c"
 
-                        "network/networkManager.c"
+                        "network/zigbeeManager.c"
 
     INCLUDE_DIRS        ""
                         "userInterface"
                         "network"
-                       
-    PRIV_REQUIRES spi_flash                   
+
+    PRIV_REQUIRES       spi_flash    
+                        nvs_flash
+                        driver               
 )

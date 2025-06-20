@@ -17,6 +17,7 @@
     "esp_log.h": "c",
     "button_gpio.h": "c",
     "stdint.h": "c",
-    "semphr.h": "c"
+    "semphr.h": "c",
+    "nvs_flash.h": "c"
   }
 }
