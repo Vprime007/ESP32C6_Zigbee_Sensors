@@ -70,6 +70,10 @@ static const char * TAG = "ZIGBEE";
 *******************************************************************************/
 static void bdbStartTopLevelCommissioningCallback(uint8_t mode_mask){
 
+    esp_err_t ret = esp_zb_bdb_start_top_level_commissioning(mode_mask);
+    if(ret != ESP_OK){
+        ESP_LOGI(TAG, "Failed to start Zigbee bdb commissioning");
+    }
 }
 
 static esp_err_t zigbeeActionHandler(esp_zb_core_action_callback_id_t callback_id, 
@@ -120,6 +124,49 @@ static void updateNetworkState(ZIGBEE_Nwk_State_t state){
 
 void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
 
+    uint32_t *p_sg_p = signal_struct->p_app_signal;
+    esp_err_t err_status = signal_struct->esp_err_status;
+    esp_zb_app_signal_type_t sig_type = *p_sg_p;
+
+    switch(sig_type){
+
+        case ESP_ZB_ZDO_SIGNAL_SKIP_STARTUP:
+        {
+            ESP_LOGI(TAG, "Initialize Zigbee stack");
+            esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_INITIALIZATION);
+        }
+        break;
+
+        case ESP_ZB_BDB_SIGNAL_STEERING:
+        {
+            if(err_status == ESP_OK){
+
+            }
+            else{
+
+                ESP_LOGI(TAG, "Network steering was not successful (status: %s)", esp_err_to_name(err_status));
+
+                if(network_steering_attempt < NETWORK_STEERING_ATTEMPTS-1){
+                    network_steering_attempt++;//Increment attempts cptr
+                    ESP_LOGI(TAG, "Network Steering attempt: %d", network_steering_attempt);
+                    //Schedule a new network steering attempt
+                    esp_zb_scheduler_alarm((esp_zb_callback_t)bdbStartTopLevelCommissioningCallback, 
+                                           ESP_ZB_BDB_MODE_NETWORK_STEERING, 
+                                           1000);
+                }
+            }
+        }
+        break;
+
+        default:
+        {
+            ESP_LOGI(TAG, "ZDO signal: %s (0x%x), status: %s", 
+                          esp_zb_zdo_signal_to_string(sig_type), 
+                          sig_type, 
+                          esp_err_to_name(err_status));
+        }
+        break;
+    }
 }
 
 /******************************************************************************

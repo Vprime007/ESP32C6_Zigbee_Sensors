@@ -14,7 +14,10 @@
 /******************************************************************************
 *   Public Data Types
 *******************************************************************************/
-
+typedef enum HUMIDITY_Cluster_Ret_e{
+    HUMIDITY_CLUSTER_STATUS_ERROR,
+    HUMIDITY_CLUSTER_STATUS_OK,
+}HUMIDITY_Cluster_Ret_t;
 
 /******************************************************************************
 *   Public Variables
@@ -29,6 +32,6 @@
 /******************************************************************************
 *   Public Functions
 *******************************************************************************/
-
+HUMIDITY_Cluster_Ret_t HUMIDITY_InitCluster(void);
 
 #endif//_HUMIDITY_MEAS_CLUSTER_H
