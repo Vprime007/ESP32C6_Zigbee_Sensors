@@ -41,11 +41,11 @@
 *   Private Functions Declaration
 *******************************************************************************/
 static void bdbStartTopLevelCommissioningCallback(uint8_t mode_mask);
-static esp_err_t zigbeeActionHandler(esp_zb_core_action_callback_id_t callback_id, 
-                                     const void *message);
 
 static void leaveNetworkCallback(uint8_t param);
 static void updateNetworkState(ZIGBEE_Nwk_State_t state);
+
+static void tZigbeeTask(void *pvParameters);
 
 /******************************************************************************
 *   Public Variables
@@ -61,12 +61,23 @@ static esp_zb_cluster_list_t *device_cluster_list = NULL;
 static ZIGBEE_Nwk_State_t network_state = ZIGBEE_NWK_INVALID;
 static uint8_t network_steering_attempt = 0;
 
+static TaskHandle_t zigbee_task_handle = NULL;
 static SemaphoreHandle_t zigbee_mutex_handle = NULL;
 
 static const char * TAG = "ZIGBEE";
 
 /******************************************************************************
 *   Private Functions Definitions
+*******************************************************************************/
+/***************************************************************************//*!
+*  \brief BDB top level commissioning callback.
+*   
+*   Preconditions: Zigbee stack is initialized.
+*
+*   Side Effects: None.
+*
+*   \param[in]  mode_mask 
+*
 *******************************************************************************/
 static void bdbStartTopLevelCommissioningCallback(uint8_t mode_mask){
 
@@ -76,18 +87,35 @@ static void bdbStartTopLevelCommissioningCallback(uint8_t mode_mask){
     }
 }
 
-static esp_err_t zigbeeActionHandler(esp_zb_core_action_callback_id_t callback_id, 
-                                     const void *message){  
-
-    esp_err_t ret = ESP_OK;
-
-    return ret;
-}
-
+/***************************************************************************//*!
+*  \brief leave network callback.
+*
+*   Leave network callback need perform network leave and factory reset
+*   of the device. The function do not use param for the moment.
+*   
+*   Preconditions: Zigbee stack is initialized.
+*
+*   Side Effects: None.
+*
+*   \param[in]  param          optional parameter.
+*
+*******************************************************************************/
 static void leaveNetworkCallback(uint8_t param){
     esp_zb_factory_reset();
 }
 
+/***************************************************************************//*!
+*  \brief Update network state.
+*
+*   Update network state to new value and managed value stored in NVS.
+*   
+*   Preconditions: Zigbee stack is initialized.
+*
+*   Side Effects: None.
+*
+*   \param[in]  state           Network state.
+*
+*******************************************************************************/
 static void updateNetworkState(ZIGBEE_Nwk_State_t state){
 
     ZIGBEE_Nwk_State_t tmp_nwk_state = ZIGBEE_NWK_INVALID;
@@ -122,6 +150,18 @@ static void updateNetworkState(ZIGBEE_Nwk_State_t state){
     }
 }
 
+/**
+ * @brief Zigbee stack application signal handler.
+ * @anchor esp_zb_app_signal_handler
+ *
+ * @param[in] signal_s   pointer of Zigbee zdo app signal struct @ref esp_zb_app_signal_s.
+ * @note After esp_zb_start, user shall based on the corresponding signal type refer to esp_zdo_app_signal_type 
+ *       from struct pointer signal_s to do certain actions.
+ * 
+ * User could also use refer to esp_zb_bdb_start_top_level_commissioning to change BDB mode.
+ * 
+ * @warning This function has to be defined by user in each example.
+ */
 void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
 
     uint32_t *p_sg_p = signal_struct->p_app_signal;
@@ -167,6 +207,27 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
         }
         break;
     }
+}
+
+/***************************************************************************//*!
+*  \brief Zigbee task
+*
+*   Zigbee task. This is where the stack main loop is called.
+*   
+*   Preconditions: Zigbee stack is initialized.
+*
+*   Side Effects: None.
+*
+*******************************************************************************/
+static void tZigbeeTask(void *pvParameters){
+
+    ESP_LOGI(TAG, "Starting Zigbee task");
+
+    for(;;){
+        //Zigbee stack loop
+        esp_zb_stack_main_loop();
+    }
+    vTaskDelete(NULL);
 }
 
 /******************************************************************************
@@ -226,6 +287,8 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
     network_state = tmp_nwk_state;
     xSemaphoreGive(zigbee_mutex_handle);
 
+    
+
     return ZIGBEE_STATUS_OK;
 }
 
@@ -234,14 +297,23 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
 *
 *   This function is used to start the zigbee stack
 *   
-*   Preconditions: None.
+*   Preconditions: Zigbee stack is initialized.
 *
 *   Side Effects: None. 
 *
 *******************************************************************************/
 void ZIGBEE_StartStack(void){
 
-    esp_zb_main_loop_iteration();
+    if(pdTRUE != xTaskCreate(tZigbeeTask,
+                             "Zigbee Task",
+                             4096,
+                             NULL,
+                             8,
+                             &zigbee_task_handle)){
+
+        ESP_LOGI(TAG, "Failed to create Zigbee stask");
+        while(1);//Stall here
+    }
 }
 
 /***************************************************************************//*!
@@ -249,7 +321,7 @@ void ZIGBEE_StartStack(void){
 *
 *   This function is use to start a zigbee network scan.
 *   
-*   Preconditions: None.
+*   Preconditions: Zigbee stack is started and running.
 *
 *   Side Effects: None. 
 *
@@ -257,6 +329,20 @@ void ZIGBEE_StartStack(void){
 *
 *******************************************************************************/
 ZIGBEE_Ret_t ZIGBEE_StartScanning(void){
+
+    //Check current network state
+    ZIGBEE_Nwk_State_t tmp_nwk_state = ZIGBEE_NWK_INVALID;
+
+    xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
+    tmp_nwk_state = network_state;
+    xSemaphoreGive(zigbee_mutex_handle);
+
+    if(tmp_nwk_state != ZIGBEE_NWK_NOT_CONNECTED){
+        return ZIGBEE_STATUS_ERROR;
+    }
+
+    //Start network steering
+    esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
 
     return ZIGBEE_STATUS_OK;
 }
@@ -266,7 +352,7 @@ ZIGBEE_Ret_t ZIGBEE_StartScanning(void){
 *
 *   This function is use to leave a zigbee network
 *   
-*   Preconditions: None.
+*   Preconditions: Zigbee stack is started and running.
 *
 *   Side Effects: None. 
 *
@@ -285,7 +371,7 @@ void ZIGBEE_LeaveNetwork(void){
 *
 *   This function return the current zigbee network state.
 *   
-*   Preconditions: None.
+*   Preconditions: Zigbee stack is started and running.
 *
 *   Side Effects: None. 
 *

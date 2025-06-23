@@ -1,20 +1,13 @@
-#ifndef _ZIGBEE_MANAGER_H
-#define _ZIGBEE_MANAGER_H
+#ifndef _AHT10_H
+#define _AHT10_H
 
 #include <stdint.h>
-#include <stdbool.h>
-
-#include "esp_zigbee_core.h"
 
 /******************************************************************************
 *   Public Definitions
 *******************************************************************************/
-#define ZIGBEE_DEVICE_TYPE              (ESP_ZB_DEVICE_TYPE_ED)
-#define ZIGBEE_ENDPOINT_1               (1)
-#define ZIGBEE_INSTALLCODE_POLICY       (false)
-#define ZIGBEE_ED_AGING_TIMEOUT         (ESP_ZB_ED_AGING_TIMEOUT_64MIN)
-#define ZIGBEE_ED_KEEP_ALIVE_MS         (7 * 1000)
-#define ZIGBEE_PRIMARY_CHANNEL_MASK     (ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK)
+#define AHT10_INVALID_TEMPERATURE               (0x8000)
+#define AHT10_INVALID_HUMIDITY                  (0xFFFF)
 
 /******************************************************************************
 *   Public Macros
@@ -24,21 +17,12 @@
 /******************************************************************************
 *   Public Data Types
 *******************************************************************************/
-typedef enum ZIGBEE_Nwk_State_e{
-    ZIGBEE_NWK_NOT_CONNECTED,
-    ZIGBEE_NWK_CONNECTED,
-    ZIGBEE_NWK_NO_PARENT,
+typedef void(*WaitMsFunction_t)(uint32_t wait_ms);
 
-    ZIGBEE_NWK_SCANNING,
-    ZIGBEE_NWK_LEAVING,
-
-    ZIGBEE_NWK_INVALID,
-}ZIGBEE_Nwk_State_t;
-
-typedef enum ZIGBEE_Ret_e{
-    ZIGBEE_STATUS_ERROR,
-    ZIGBEE_STATUS_OK,
-}ZIGBEE_Ret_t;
+typedef enum AHT10_Ret_e{
+    AHT10_STATUS_ERROR,
+    AHT10_STATUS_OK,
+}AHT10_Ret_t;
 
 /******************************************************************************
 *   Public Variables
@@ -54,69 +38,72 @@ typedef enum ZIGBEE_Ret_e{
 *   Public Functions
 *******************************************************************************/
 /***************************************************************************//*!
-*  \brief Init Zigbee stack
+*  \brief AHT10 initialization.
 *
-*   This function perform the zigbee stack initialization.
+*   Initialize the AHT10 interface and peripheral. A wait function must 
+*   be passed as parameter for the AHT10 to measure properly.
 *   
 *   Preconditions: None.
 *
 *   Side Effects: None.
 *
-*   \return     Status of operation.   
-*
-*******************************************************************************/
-ZIGBEE_Ret_t ZIGBEE_InitStack(void);
-
-/***************************************************************************//*!
-*  \brief Zigbee start stack
-*
-*   This function is used to start the zigbee stack
-*   
-*   Preconditions: Zigbee stack is initialized.
-*
-*   Side Effects: None. 
-*
-*******************************************************************************/
-void ZIGBEE_StartStack(void);
-
-/***************************************************************************//*!
-*  \brief Zigbee start network scanning.
-*
-*   This function is use to start a zigbee network scan.
-*   
-*   Preconditions: Zigbee stack is started and running.
-*
-*   Side Effects: None. 
+*   \param[in]  scl_gpio            I2C SCL gpio.
+*   \param[in]  sda_gpio            I2C SDA gpio.
+*   \param[in]  wait_function       Wait function.
 *
 *   \return     Operation status
 *
 *******************************************************************************/
-ZIGBEE_Ret_t ZIGBEE_StartScanning(void);
+AHT10_Ret_t AHT10_Init(uint8_t scl_gpio, 
+                       uint8_t sda_gpio, 
+                       WaitMsFunction_t wait_function);
 
 /***************************************************************************//*!
-*  \brief Zigbee leave network.
+*  \brief Start AHT10 measurement.
 *
-*   This function is use to leave a zigbee network
-*   
-*   Preconditions: Zigbee stack is started and running.
-*
-*   Side Effects: None. 
-*
-*******************************************************************************/
-void ZIGBEE_LeaveNetwork(void);
-
-/***************************************************************************//*!
-*  \brief Get Zigbee network state
-*
-*   This function return the current zigbee network state.
+*   Start measurement process and read back the temperature/humidity values
+*   from the AHT10 sensor.
 *   
 *   Preconditions: None.
 *
-*   Side Effects: None. 
+*   Side Effects: None.
 *
-*   \return     zigbee network state
+*   \return     Operation status
 *
 *******************************************************************************/
-ZIGBEE_Nwk_State_t ZIGBEE_GetNwkState(void);
+AHT10_Ret_t AHT10_StartMeasurement(void);
 
-#endif//_NETORK_MANAGER_H
+/***************************************************************************//*!
+*  \brief Get the last temperature measurement.
+*
+*   Return the last valid temperature measurement result for the AHT10.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  pTemperature         Pointer to store the temperature value.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
+AHT10_Ret_t AHT10_GetLastTemperature(int16_t *pTemperature);
+
+/***************************************************************************//*!
+*  \brief Get the last humidity measurement.
+*
+*   Return the last valid humidity measurement result for the AHT10.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  pTemperature         Pointer to store the humidity value.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
+AHT10_Ret_t AHT10_GetLastHumidity(uint16_t *pHumidity);
+
+
+#endif//_AHT10_H

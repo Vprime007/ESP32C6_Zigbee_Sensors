@@ -10,9 +10,13 @@ idf_component_register(
                         "network/tempMeasCluster.c"
                         "network/humidityMeasCluster.c"
 
+                        "sensors/aht10.c"
+                        "sensors/sensorController.c"
+
     INCLUDE_DIRS        ""
                         "userInterface"
                         "network"
+                        "sensors"
 
     PRIV_REQUIRES       spi_flash    
                         nvs_flash
