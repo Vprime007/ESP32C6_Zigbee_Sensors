@@ -1,6 +1,8 @@
 #ifndef _BASIC_CLUSTER_H
 #define _BASIC_CLUSTER_H
 
+#include "esp_zigbee_core.h"
+
 /******************************************************************************
 *   Public Definitions
 *******************************************************************************/
@@ -32,6 +34,22 @@ typedef enum BASIC_Cluster_Ret_e{
 /******************************************************************************
 *   Public Functions
 *******************************************************************************/
-BASIC_Cluster_Ret_t BASIC_IntiCluster(void);
+/***************************************************************************//*!
+*  \brief Basic cluster initialization.
+*
+*   Initialize Basic cluster and attributes with default value. It 
+*   also add the Basic cluster to the cluster list passed to this
+*   function.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None. 
+*
+*   \param[in]  pCluster_list           Zigbee cluster list
+*
+*   \return     Operation status
+*
+*******************************************************************************/
+BASIC_Cluster_Ret_t BASIC_IntiCluster(esp_zb_cluster_list_t *pCluster_list);
 
 #endif//_BASIC_CLUSTER_H
