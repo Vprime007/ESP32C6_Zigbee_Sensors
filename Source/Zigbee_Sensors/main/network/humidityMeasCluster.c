@@ -79,6 +79,8 @@ HUMIDITY_Cluster_Ret_t HUMIDITY_InitCluster(esp_zb_cluster_list_t *pCluster_list
         return HUMIDITY_CLUSTER_STATUS_ERROR;
     }
 
+    //Setup reporting
+
     return HUMIDITY_CLUSTER_STATUS_OK;
 }
 
@@ -154,9 +156,9 @@ HUMIDITY_Cluster_Ret_t HUMIDITY_GetRelHumidity(uint16_t *pRel_humidity){
                                        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, 
                                        ESP_ZB_ZCL_ATTR_REL_HUMIDITY_MEASUREMENT_VALUE_ID);
 
-    *pRel_humidity = *(uint16_t*)(pAttrib->data_p);
-
     esp_zb_lock_release();
+
+    *pRel_humidity = *(uint16_t*)(pAttrib->data_p);
 
     return HUMIDITY_CLUSTER_STATUS_OK;
 }

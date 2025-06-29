@@ -6,8 +6,9 @@
 /******************************************************************************
 *   Public Definitions
 *******************************************************************************/
-#define MAX_RELATIVE_HUMIDITY_LEVEL             (100 * 100)
-#define MIN_RELATIVE_HUMIDITY_LEVEL             (0)
+#define MAX_RELATIVE_HUMIDITY_LEVEL             (ESP_ZB_ZCL_REL_HUMIDITY_MEASUREMENT_MAX_MEASURED_VALUE_MAXIMUM)
+#define MIN_RELATIVE_HUMIDITY_LEVEL             (ESP_ZB_ZCL_REL_HUMIDITY_MEASUREMENT_MIN_MEASURED_VALUE_MINIMUM)
+#define INVALID_RELATIVE_HUMIDITY_LEVEL         (ESP_ZB_ZCL_REL_HUMIDITY_MEASUREMENT_MEASURED_VALUE_UNKNOWN)
 
 /******************************************************************************
 *   Public Macros
