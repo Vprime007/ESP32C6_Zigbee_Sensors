@@ -223,6 +223,9 @@ static void tZigbeeTask(void *pvParameters){
 
     ESP_LOGI(TAG, "Starting Zigbee task");
 
+    //Start zigbee stack
+    esp_zb_start(false);
+
     for(;;){
         //Zigbee stack loop
         esp_zb_stack_main_loop();
@@ -263,6 +266,8 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
         return ZIGBEE_STATUS_ERROR;
     }
 
+    nvs_flash_init();
+
     nvs_err = nvs_get_u8(nvs_handle, NETWORK_STATE_NVS, (uint8_t*)&tmp_nwk_state);
     if(nvs_err == ESP_ERR_NVS_NOT_FOUND){
         ESP_LOGI(TAG, "Zigbee Nwk state mst be init in NVS");
@@ -272,7 +277,7 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
 
     nvs_get_u8(nvs_handle, NETWORK_STATE_NVS, (uint8_t*)&tmp_nwk_state);
 
-    //If networ kstate is in an invalid boot state -> set to NOT_CONNECTED
+    //If network state is in an invalid boot state -> set to NOT_CONNECTED
     if((tmp_nwk_state != ZIGBEE_NWK_CONNECTED) && (tmp_nwk_state != ZIGBEE_NWK_NOT_CONNECTED)){
         tmp_nwk_state = ZIGBEE_NWK_NOT_CONNECTED;
 
@@ -287,7 +292,51 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
     network_state = tmp_nwk_state;
     xSemaphoreGive(zigbee_mutex_handle);
 
-    
+    //Platform config
+    esp_zb_platform_config_t config = {
+        .host_config.host_connection_mode = ZB_HOST_CONNECTION_MODE_NONE,
+        .radio_config.radio_mode = ZB_RADIO_MODE_NATIVE, 
+    };
+    if(ESP_OK != esp_zb_platform_config(&config)){
+        ESP_LOGI(TAG, "Failed to config zigbee platform");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
+    //Zigbee device config
+    esp_zb_cfg_t zb_nwk_config = {
+        .esp_zb_role = ZIGBEE_DEVICE_TYPE,
+        .install_code_policy = ZIGBEE_INSTALLCODE_POLICY,
+        .nwk_cfg.zed_cfg = {
+            .ed_timeout = ZIGBEE_ED_AGING_TIMEOUT,
+            .keep_alive = ZIGBEE_ED_KEEP_ALIVE_MS,
+        },
+    };
+    esp_zb_init(&zb_nwk_config);
+
+    //Create cluster list
+    esp_zb_cluster_list_t *cluster_list = esp_zb_zcl_cluster_list_create();
+    if(TEMP_CLUSTER_STATUS_OK != TEMP_InitCluster(cluster_list)){
+        ESP_LOGI(TAG, "Failed to init Temperature cluster");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
+    if(HUMIDITY_CLUSTER_STATUS_OK != HUMIDITY_InitCluster(cluster_list)){
+        ESP_LOGI(TAG, "Failed to init humidity cluster");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
+    //Create device enpoint
+    esp_zb_ep_list_t *ep_list = esp_zb_ep_list_create();
+    esp_zb_endpoint_config_t endpoint_config = {
+        .endpoint = ZIGBEE_ENDPOINT_1,
+        .app_device_version = 0,
+        .app_device_id = ESP_ZB_HA_TEMPERATURE_SENSOR_DEVICE_ID,
+        .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+    };
+    if(esp_zb_ep_list_add_ep(ep_list, cluster_list, endpoint_config)){
+        ESP_LOGI(TAG, "Failed to add endpoint");
+        return ZIGBEE_STATUS_ERROR;
+    }
 
     return ZIGBEE_STATUS_OK;
 }

@@ -9,7 +9,11 @@
 /******************************************************************************
 *   Private Definitions
 *******************************************************************************/
-#define LOG_LOCAL_LEVEL                     (ESP_LOG_INFO)
+#define HUMIDITY_MEAS_REPORT_MIN_INTERVAL_S     (10)
+#define HUMIDITY_MEAS_REPORT_MAX_INTERVAL_S     (3600)
+#define HUMIDITY_MEAS_REPORT_DELTA              (100)
+
+#define LOG_LOCAL_LEVEL                         (ESP_LOG_INFO)
 
 /******************************************************************************
 *   Private Macros
@@ -79,7 +83,25 @@ HUMIDITY_Cluster_Ret_t HUMIDITY_InitCluster(esp_zb_cluster_list_t *pCluster_list
         return HUMIDITY_CLUSTER_STATUS_ERROR;
     }
 
-    //Setup reporting
+    //setup reporting
+    /*esp_zb_zcl_reporting_info_t reporting_info = {
+        .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV,
+        .ep = ZIGBEE_ENDPOINT_1,
+        .cluster_id = ESP_ZB_ZCL_CLUSTER_ID_REL_HUMIDITY_MEASUREMENT,
+        .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        .u.send_info.min_interval = HUMIDITY_MEAS_REPORT_MIN_INTERVAL_S,
+        .u.send_info.max_interval = HUMIDITY_MEAS_REPORT_MAX_INTERVAL_S,
+        .u.send_info.def_min_interval = HUMIDITY_MEAS_REPORT_MIN_INTERVAL_S,
+        .u.send_info.def_max_interval = HUMIDITY_MEAS_REPORT_MAX_INTERVAL_S,
+        .u.send_info.delta = HUMIDITY_MEAS_REPORT_DELTA,
+        .attr_id = ESP_ZB_ZCL_ATTR_REL_HUMIDITY_MEASUREMENT_VALUE_ID,
+        .manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC,
+    };
+    if(ESP_OK != esp_zb_zcl_update_reporting_info(&reporting_info)){
+
+        ESP_LOGI(TAG, "Failed to setup attrib reporting");
+        return HUMIDITY_CLUSTER_STATUS_ERROR;
+    }*/
 
     return HUMIDITY_CLUSTER_STATUS_OK;
 }
