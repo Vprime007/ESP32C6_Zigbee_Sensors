@@ -11,6 +11,7 @@
 
 #include "sensorController.h"
 #include "aht10.h"
+#include "zigbeeManager.h"
 
 /******************************************************************************
 *   Private Definitions
@@ -18,6 +19,8 @@
 #define LOG_LOCAL_LEVEL                 (ESP_LOG_INFO)
 
 #define INTER_STEP_DELAY_MS             (25)
+#define INITIAL_DELAY_MS                (10 * 1000)
+#define SENSOR_LOOP_PERIOD_MS           (1 * 1000)
 
 /******************************************************************************
 *   Private Macros
@@ -75,6 +78,8 @@ static void tSensorTask(void *pvParameters){
 
     ESP_LOGI(TAG, "Starting Sensor task");
 
+    vTaskDelay(INITIAL_DELAY_MS/portTICK_PERIOD_MS);
+
     for(;;){
 
         switch(sensor_step){
@@ -104,10 +109,22 @@ static void tSensorTask(void *pvParameters){
                     ESP_LOGI(TAG, "Failed to get last temperature");
                     temperature = AHT10_INVALID_TEMPERATURE;
                 }
+                else{
+                    //Format temperature for zigbee cluster
+                    temperature *= 100;
+                }
 
                 ESP_LOGI(TAG, "Temperature: %d *C", temperature);
 
                 //Store new value in zigbee cluster
+                esp_zb_lock_acquire(portMAX_DELAY);
+                esp_zb_zcl_set_attribute_val(ZIGBEE_ENDPOINT_1, 
+                                             ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT,
+                                             ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                                             ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID,
+                                             &temperature,
+                                             false);
+                esp_zb_lock_release();
 
                 //Set next step
                 sensor_step = SENSOR_STEP_PROCESS_HUMIDITY;
@@ -122,10 +139,22 @@ static void tSensorTask(void *pvParameters){
                     ESP_LOGI(TAG, "Failed to get last humidity");
                     humidity = AHT10_INVALID_HUMIDITY;
                 }
+                else{
+                    //Format humidity for zigbee cluster
+                    humidity *= 100;
+                }
 
                 ESP_LOGI(TAG, "Humidity: %d", humidity);
 
                 //Store new value in zigbee cluster
+                esp_zb_lock_acquire(portMAX_DELAY);
+                esp_zb_zcl_set_attribute_val(ZIGBEE_ENDPOINT_1, 
+                                             ESP_ZB_ZCL_CLUSTER_ID_REL_HUMIDITY_MEASUREMENT,
+                                             ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                                             ESP_ZB_ZCL_ATTR_REL_HUMIDITY_MEASUREMENT_VALUE_ID,
+                                             &humidity,
+                                             false);
+                esp_zb_lock_release();
 
                 //Set next step
                 sensor_step = SENSOR_STEP_IDLE;
@@ -141,7 +170,7 @@ static void tSensorTask(void *pvParameters){
             break;
         }
 
-        vTaskDelay(1000/portTICK_PERIOD_MS);
+        vTaskDelay(SENSOR_LOOP_PERIOD_MS/portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }
