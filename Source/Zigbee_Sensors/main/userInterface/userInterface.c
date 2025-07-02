@@ -9,6 +9,7 @@
 
 #include "userInterface.h"
 #include "buttonController.h"
+#include "zigbeeManager.h"
 
 /******************************************************************************
 *   Private Definitions
@@ -134,12 +135,18 @@ static void tUiTask(void *pvParameters){
                 case UI_EVENT_BTN_SHORTPRESS:
                 {
                     ESP_LOGI(TAG, "Processing SHORTPRESS event");
+                    //Check zigbee network status
+                    ZIGBEE_Nwk_State_t nwk_state = ZIGBEE_GetNwkState();
+                    if(nwk_state == ZIGBEE_NWK_NOT_CONNECTED){
+                        ZIGBEE_StartScanning();
+                    }
                 }
                 break;
 
                 case UI_EVENT_BTN_LONGPRESS:
                 {
                     ESP_LOGI(TAG, "Processing LONGPRESS event");
+                    ZIGBEE_LeaveNetwork();
                 }
                 break;
 

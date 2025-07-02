@@ -5,7 +5,8 @@
   "idf.openOcdConfigs": [
     "board/esp32c6-builtin.cfg"
   ],
-  "idf.portWin": "COM8",
+  "idf.portWin": "/dev/ttyACM0",
+  "idf.port": "/dev/ttyACM0",
   "idf.toolsPathWin": "C:\\Users\\vmblanchard\\.espressif",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32c6"

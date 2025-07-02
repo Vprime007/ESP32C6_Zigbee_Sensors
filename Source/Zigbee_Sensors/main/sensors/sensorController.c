@@ -81,8 +81,6 @@ static void tSensorTask(void *pvParameters){
 
             case SENSOR_STEP_IDLE:
             {
-                ESP_LOGI(TAG, "STEP_IDLE");
-
                 //Set next step
                 sensor_step = SENSOR_STEP_MEAS;
                 vTaskDelay(INTER_STEP_DELAY_MS/portTICK_PERIOD_MS);
@@ -91,8 +89,6 @@ static void tSensorTask(void *pvParameters){
 
             case SENSOR_STEP_MEAS:
             {
-                ESP_LOGI(TAG, "STEP_MEAS");
-
                 AHT10_StartMeasurement();
 
                 //Set next step
@@ -103,13 +99,13 @@ static void tSensorTask(void *pvParameters){
 
             case SENSOR_STEP_PROCESS_TEMP:
             {
-                ESP_LOGI(TAG, "STEP_PROCESS_TEMP");
-
                 int16_t temperature = AHT10_INVALID_TEMPERATURE;
                 if(AHT10_STATUS_OK != AHT10_GetLastTemperature(&temperature)){
                     ESP_LOGI(TAG, "Failed to get last temperature");
                     temperature = AHT10_INVALID_TEMPERATURE;
                 }
+
+                ESP_LOGI(TAG, "Temperature: %d *C", temperature);
 
                 //Store new value in zigbee cluster
 
@@ -121,13 +117,13 @@ static void tSensorTask(void *pvParameters){
 
             case SENSOR_STEP_PROCESS_HUMIDITY:
             {
-                ESP_LOGI(TAG, "STEP_PROCESS_HUMIDITY");
-
                 uint16_t humidity = AHT10_INVALID_HUMIDITY;
                 if(AHT10_STATUS_OK != AHT10_GetLastHumidity(&humidity)){
                     ESP_LOGI(TAG, "Failed to get last humidity");
                     humidity = AHT10_INVALID_HUMIDITY;
                 }
+
+                ESP_LOGI(TAG, "Humidity: %d", humidity);
 
                 //Store new value in zigbee cluster
 

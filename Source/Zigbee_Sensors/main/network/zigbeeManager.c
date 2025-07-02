@@ -55,9 +55,6 @@ static void tZigbeeTask(void *pvParameters);
 /******************************************************************************
 *   Private Variables
 *******************************************************************************/
-static esp_zb_ep_list_t *device_endpoint_list = NULL;
-static esp_zb_cluster_list_t *device_cluster_list = NULL;
-
 static ZIGBEE_Nwk_State_t network_state = ZIGBEE_NWK_INVALID;
 static uint8_t network_steering_attempt = 0;
 
@@ -194,6 +191,12 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
                                            ESP_ZB_BDB_MODE_NETWORK_STEERING, 
                                            1000);
                 }
+                else{
+                    ESP_LOGI(TAG, "Failed to connect");
+                    xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
+                    network_state = ZIGBEE_NWK_NOT_CONNECTED;
+                    xSemaphoreGive(zigbee_mutex_handle);
+                }
             }
         }
         break;
@@ -257,6 +260,8 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
         return ZIGBEE_STATUS_ERROR;
     }
 
+    nvs_flash_init();
+
     //Restore network state from NVS
     ZIGBEE_Nwk_State_t tmp_nwk_state = ZIGBEE_NWK_INVALID;
     nvs_handle_t nvs_handle;
@@ -266,11 +271,9 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
         return ZIGBEE_STATUS_ERROR;
     }
 
-    nvs_flash_init();
-
     nvs_err = nvs_get_u8(nvs_handle, NETWORK_STATE_NVS, (uint8_t*)&tmp_nwk_state);
     if(nvs_err == ESP_ERR_NVS_NOT_FOUND){
-        ESP_LOGI(TAG, "Zigbee Nwk state mst be init in NVS");
+        ESP_LOGI(TAG, "Zigbee Nwk state must be init in NVS");
         nvs_set_u8(nvs_handle, NETWORK_STATE_NVS, ZIGBEE_NWK_NOT_CONNECTED);
         nvs_commit(nvs_handle);
     }
@@ -333,8 +336,13 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
         .app_device_id = ESP_ZB_HA_TEMPERATURE_SENSOR_DEVICE_ID,
         .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
     };
-    if(esp_zb_ep_list_add_ep(ep_list, cluster_list, endpoint_config)){
+    if(ESP_OK != esp_zb_ep_list_add_ep(ep_list, cluster_list, endpoint_config)){
         ESP_LOGI(TAG, "Failed to add endpoint");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
+    if(ESP_OK != esp_zb_device_register(ep_list)){
+        ESP_LOGI(TAG, "Failed to register device");
         return ZIGBEE_STATUS_ERROR;
     }
 
@@ -391,7 +399,16 @@ ZIGBEE_Ret_t ZIGBEE_StartScanning(void){
     }
 
     //Start network steering
-    esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
+    if(ESP_OK != esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING)){
+        ESP_LOGI(TAG, "Failed to start network steering");
+        return ZIGBEE_STATUS_ERROR;
+    }
+    else{
+        //Update network status
+        xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
+        network_state = ZIGBEE_NWK_SCANNING;
+        xSemaphoreGive(zigbee_mutex_handle);
+    }
 
     return ZIGBEE_STATUS_OK;
 }

@@ -21,6 +21,7 @@
 
 #include "zigbeeManager.h"
 #include "userInterface.h"
+#include "sensorController.h"
 
 /******************************************************************************
 *   Private Definitions
@@ -97,7 +98,7 @@ void app_main(void){
     //Create main task
     if(pdTRUE != xTaskCreate(tMainTask,
                              "Main task",
-                             2048,
+                             3*2048,
                              NULL,
                              4,
                              &main_task_handle)){
@@ -126,6 +127,20 @@ static void tMainTask(void *pvParameters){
     //Init User Interface
     if(UI_STATUS_OK != UI_Init()){
         ESP_LOGI(TAG, "Failed to init UI");
+    }
+
+    //Init Zigbee stack
+    if(ZIGBEE_STATUS_OK != ZIGBEE_InitStack()){
+        ESP_LOGI(TAG, "Failed to init Zigbee stack");
+    }
+    else{
+        //Start Zigbee stack
+        ZIGBEE_StartStack();
+    }
+
+    //Init sensor
+    if(SENSOR_STATUS_OK != SENSOR_InitController()){
+        ESP_LOGI(TAG, "Failed to init sensor");
     }
 
     for(;;){
