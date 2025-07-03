@@ -1,7 +1,7 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
   "idf.espIdfPathWin": "c:\\Users\\vmblanchard\\Documents\\github\\ESP32C6_Zigbee_Sensors\\Source\\SDK",
-  "idf.pythonInstallPath": "/usr/bin/python",
+  "idf.pythonInstallPath": "C:\\Users\\vmblanchard\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
   "idf.openOcdConfigs": [
     "board/esp32c6-builtin.cfg"
   ],

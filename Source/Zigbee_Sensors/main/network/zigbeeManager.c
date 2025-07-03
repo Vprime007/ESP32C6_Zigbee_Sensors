@@ -19,13 +19,14 @@
 /******************************************************************************
 *   Private Definitions
 *******************************************************************************/
-#define NETWORK_NVS_NAMESPACE           ("Network")
-#define NETWORK_STATE_NVS               ("NetworkState")
+#define NETWORK_NVS_NAMESPACE               ("Network")
+#define NETWORK_STATE_NVS                   ("NetworkState")
 
-#define NETWORK_STEERING_ATTEMPTS       (10)
-#define NETWORK_LEAVE_DELAY_MS          (4000)
+#define NETWORK_STEERING_ATTEMPTS           (10)
+#define NETWORK_LEAVE_DELAY_MS              (4000)
+#define NETWORK_COORDO_DETECT_PERIOD_MS     (1 * 3600 * 1000)
 
-#define LOG_LOCAL_LEVEL                 (ESP_LOG_INFO)
+#define LOG_LOCAL_LEVEL                     (ESP_LOG_INFO)
 
 /******************************************************************************
 *   Private Macros
@@ -43,6 +44,9 @@
 static void bdbStartTopLevelCommissioningCallback(uint8_t mode_mask);
 
 static void leaveNetworkCallback(uint8_t param);
+static void sendIeeeAddrReq(uint8_t param);
+static void ieeeAddrResponse(esp_zb_zdp_status_t zdo_status, esp_zb_zdo_ieee_addr_rsp_t *resp, void *user_ctx);
+
 static void updateNetworkState(ZIGBEE_Nwk_State_t state);
 
 static void tZigbeeTask(void *pvParameters);
@@ -99,6 +103,48 @@ static void bdbStartTopLevelCommissioningCallback(uint8_t mode_mask){
 *******************************************************************************/
 static void leaveNetworkCallback(uint8_t param){
     esp_zb_factory_reset();
+}
+
+static void sendIeeeAddrReq(uint8_t param){
+    esp_zb_zdo_ieee_addr_req_param_t req_param = {
+        .dst_nwk_addr = 0x0000,
+        .request_type = 0x00,
+    };
+
+    esp_zb_zdo_ieee_addr_req(&req_param, ieeeAddrResponse, NULL);
+}
+
+static void ieeeAddrResponse(esp_zb_zdp_status_t zdo_status, 
+                             esp_zb_zdo_ieee_addr_rsp_t *resp, 
+                             void *user_ctx){
+    
+    if(zdo_status != ESP_ZB_ZDP_STATUS_SUCCESS){
+        //Failed to reach the network coordo
+        ESP_LOGI(TAG, "Failed to detect coordo");
+
+        xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
+        if(network_state != ZIGBEE_NWK_NO_PARENT){
+            updateNetworkState(ZIGBEE_NWK_NO_PARENT);
+
+            //Nofity UI of network state change
+        }
+        xSemaphoreGive(zigbee_mutex_handle);        
+    }
+    else{
+        //Coordo detected
+        xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
+        if(network_state != ZIGBEE_NWK_CONNECTED){
+            updateNetworkState(ZIGBEE_NWK_CONNECTED);
+
+            //Notify UI of network change
+        }
+        xSemaphoreGive(zigbee_mutex_handle);
+    }
+
+    //re-schedule a IEEE addr request
+    esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReq, 
+                           0, 
+                           NETWORK_COORDO_DETECT_PERIOD_MS);
 }
 
 /***************************************************************************//*!
@@ -173,6 +219,11 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
                 xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
                 updateNetworkState(ZIGBEE_NWK_CONNECTED);
                 xSemaphoreGive(zigbee_mutex_handle);
+
+                //Schedule a IEEE addr request
+                esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReq, 
+                                       0, 
+                                       NETWORK_COORDO_DETECT_PERIOD_MS);
             }
             else{
 
