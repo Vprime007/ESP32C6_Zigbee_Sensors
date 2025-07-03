@@ -6,7 +6,7 @@
     "board/esp32c6-builtin.cfg"
   ],
   "idf.portWin": "/dev/ttyACM0",
-  "idf.port": "/dev/ttyACM0",
+  "idf.port": "/dev/ttyACM1",
   "idf.toolsPathWin": "C:\\Users\\vmblanchard\\.espressif",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32c6"

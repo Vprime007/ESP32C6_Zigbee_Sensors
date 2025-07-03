@@ -115,13 +115,7 @@ static void leaveNetworkCallback(uint8_t param){
 *******************************************************************************/
 static void updateNetworkState(ZIGBEE_Nwk_State_t state){
 
-    ZIGBEE_Nwk_State_t tmp_nwk_state = ZIGBEE_NWK_INVALID;
-
-    xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
-    tmp_nwk_state = network_state;
-    xSemaphoreGive(zigbee_mutex_handle);
-
-    if(state == tmp_nwk_state){
+    if(state == network_state){
         ESP_LOGI(TAG, "Zigbee Network state already at %d", state);
     }
     else{
@@ -138,9 +132,7 @@ static void updateNetworkState(ZIGBEE_Nwk_State_t state){
             nvs_close(nvs_handle);
 
             //Update global value
-            xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
             network_state = state;
-            xSemaphoreGive(zigbee_mutex_handle);
 
             ESP_LOGI(TAG, "Updated Network state to %d", state);
         }
@@ -177,7 +169,10 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
         case ESP_ZB_BDB_SIGNAL_STEERING:
         {
             if(err_status == ESP_OK){
-
+                //Update network state
+                xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
+                updateNetworkState(ZIGBEE_NWK_CONNECTED);
+                xSemaphoreGive(zigbee_mutex_handle);
             }
             else{
 
@@ -194,7 +189,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
                 else{
                     ESP_LOGI(TAG, "Failed to connect");
                     xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
-                    network_state = ZIGBEE_NWK_NOT_CONNECTED;
+                    updateNetworkState(ZIGBEE_NWK_NOT_CONNECTED);
                     xSemaphoreGive(zigbee_mutex_handle);
                 }
             }
@@ -328,6 +323,11 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
         return ZIGBEE_STATUS_ERROR;
     }
 
+    if(BASIC_CLUSTER_STATUS_OK != BASIC_IntiCluster(cluster_list)){
+        ESP_LOGI(TAG, "Failed to init Basic cluster");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
     //Create device enpoint
     esp_zb_ep_list_t *ep_list = esp_zb_ep_list_create();
     esp_zb_endpoint_config_t endpoint_config = {
@@ -345,6 +345,8 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
         ESP_LOGI(TAG, "Failed to register device");
         return ZIGBEE_STATUS_ERROR;
     }
+
+    esp_zb_set_primary_network_channel_set(ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK);
 
     return ZIGBEE_STATUS_OK;
 }
@@ -406,7 +408,7 @@ ZIGBEE_Ret_t ZIGBEE_StartScanning(void){
     else{
         //Update network status
         xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
-        network_state = ZIGBEE_NWK_SCANNING;
+        updateNetworkState(ZIGBEE_NWK_SCANNING);
         xSemaphoreGive(zigbee_mutex_handle);
     }
 

@@ -9,8 +9,8 @@
 /******************************************************************************
 *   Private Definitions
 *******************************************************************************/
-#define MANUFACTURER_NAME               ("V_PRIME_TECH")
-#define MODEL_IDENTIFIER                ("AHT10_ZIGBEE")
+#define MANUFACTURER_NAME               ("\x0C""V_PRIME_TECH")
+#define MODEL_IDENTIFIER                ("\x0C""AHT10_ZIGBEE")
 
 #define LOG_LOCAL_LEVEL                 (ESP_LOG_INFO)
 
@@ -73,8 +73,15 @@ BASIC_Cluster_Ret_t BASIC_IntiCluster(esp_zb_cluster_list_t *pCluster_list){
     };
     esp_zb_attribute_list_t *pBasicCluster = esp_zb_basic_cluster_create(&basic_cfg);
 
-    esp_zb_basic_cluster_add_attr(pBasicCluster, ESP_ZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID, MANUFACTURER_NAME);
-    esp_zb_basic_cluster_add_attr(pBasicCluster, ESP_ZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID, MODEL_IDENTIFIER);
+    if(ESP_OK != esp_zb_basic_cluster_add_attr(pBasicCluster, ESP_ZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID, MANUFACTURER_NAME)){
+        ESP_LOGI(TAG, "Failed to add Manufacturer Name attrib");
+        return BASIC_CLUSTER_STATUS_ERROR;
+    }
+
+    if(ESP_OK != esp_zb_basic_cluster_add_attr(pBasicCluster, ESP_ZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID, MODEL_IDENTIFIER)){
+        ESP_LOGI(TAG, "Failed to add Model Indetifier attrib");
+        return BASIC_CLUSTER_STATUS_ERROR;
+    }
 
     if(ESP_OK != esp_zb_cluster_list_add_basic_cluster(pCluster_list, 
                                                        pBasicCluster, 

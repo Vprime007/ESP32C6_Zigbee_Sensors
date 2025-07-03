@@ -85,7 +85,7 @@ TEMP_Cluster_Ret_t TEMP_InitCluster(esp_zb_cluster_list_t *pCluster_list){
     }
 
     //setup reporting
-    esp_zb_zcl_reporting_info_t reporting_info = {
+    /*esp_zb_zcl_reporting_info_t reporting_info = {
         .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV,
         .ep = ZIGBEE_ENDPOINT_1,
         .cluster_id = ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT,
@@ -102,7 +102,7 @@ TEMP_Cluster_Ret_t TEMP_InitCluster(esp_zb_cluster_list_t *pCluster_list){
 
         ESP_LOGI(TAG, "Failed to setup attrib reporting");
         return TEMP_CLUSTER_STATUS_ERROR;
-    }
+    }*/
 
     return TEMP_CLUSTER_STATUS_OK;
 }
