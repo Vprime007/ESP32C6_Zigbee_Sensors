@@ -3,7 +3,7 @@ idf_component_register(
     SRCS                "main.c"
                         "userInterface/userInterface.c"
                         "userInterface/buttonController.c"
-                        "userInterface/ledController.c"
+                        "userInterface/led/ledController.c"
 
                         "network/zigbeeManager.c"
                         "network/basicCluster.c"
@@ -16,6 +16,7 @@ idf_component_register(
 
     INCLUDE_DIRS        ""
                         "userInterface"
+                        "userInterface/led"
                         "network"
                         "sensors"
 

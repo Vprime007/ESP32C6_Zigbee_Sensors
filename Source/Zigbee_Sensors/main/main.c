@@ -189,9 +189,9 @@ static void tMainTask(void *pvParameters){
     }
 
     //Init sensor
-    /*if(SENSOR_STATUS_OK != SENSOR_InitController()){
+    if(SENSOR_STATUS_OK != SENSOR_InitController()){
         ESP_LOGI(TAG, "Failed to init sensor");
-    }*/
+    }
 
     for(;;){
 
