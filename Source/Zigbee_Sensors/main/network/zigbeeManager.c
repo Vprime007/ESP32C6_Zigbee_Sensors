@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "freertos/timers.h"
 
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -25,7 +26,8 @@
 
 #define NETWORK_STEERING_ATTEMPTS           (10)
 #define NETWORK_LEAVE_DELAY_MS              (4000)
-#define NETWORK_COORDO_DETECT_PERIOD_MS     (1 * 3600 * 1000)
+#define NETWORK_COORDO_DETECT_PERIOD_MS     (30 * 1000)
+#define NETWORK_COORD_DETECT_TIMEOUT_MS     (5 * 1000)
 
 #define LOG_LOCAL_LEVEL                     (ESP_LOG_INFO)
 
@@ -45,8 +47,11 @@
 static void bdbStartTopLevelCommissioningCallback(uint8_t mode_mask);
 
 static void leaveNetworkCallback(uint8_t param);
-static void sendIeeeAddrReq(uint8_t param);
-static void ieeeAddrResponse(esp_zb_zdp_status_t zdo_status, esp_zb_zdo_ieee_addr_rsp_t *resp, void *user_ctx);
+static void sendIeeeAddrReqCallback(uint8_t param);
+static void ieeeAddrResponseTimeout(TimerHandle_t xTimer);
+static void ieeeAddrResponseCallback(esp_zb_zdp_status_t zdo_status, 
+                                     esp_zb_zdo_ieee_addr_rsp_t *resp, 
+                                     void *user_ctx);
 
 static void updateNetworkState(ZIGBEE_Nwk_State_t state);
 
@@ -66,6 +71,7 @@ static networkStateChangeCallback_t nwk_state_change_callback;
 
 static TaskHandle_t zigbee_task_handle = NULL;
 static SemaphoreHandle_t zigbee_mutex_handle = NULL;
+static TimerHandle_t ieee_req_timer_handle = NULL;
 
 static const char * TAG = "ZIGBEE";
 
@@ -107,24 +113,73 @@ static void leaveNetworkCallback(uint8_t param){
     esp_zb_factory_reset();
 }
 
-static void sendIeeeAddrReq(uint8_t param){
+/***************************************************************************//*!
+*  \brief Send IEEE address request callback
+*
+*   Send IEEE address request to the network coordo (addr 0x0000).
+*   
+*   Preconditions: Zigbee stack is initialized.
+*
+*   Side Effects: None.
+*
+*   \param[in]  param          optional parameter.
+*
+*******************************************************************************/
+static void sendIeeeAddrReqCallback(uint8_t param){
+
+    ESP_LOGI(TAG, "Send IEEE Address request");
+
     esp_zb_zdo_ieee_addr_req_param_t req_param = {
         .dst_nwk_addr = 0x0000,
         .request_type = 0x00,
     };
 
-    esp_zb_zdo_ieee_addr_req(&req_param, ieeeAddrResponse, NULL);
+    esp_zb_zdo_ieee_addr_req(&req_param, ieeeAddrResponseCallback, NULL);
+    xTimerStart(ieee_req_timer_handle, 10/portTICK_PERIOD_MS);
 }
 
-static void ieeeAddrResponse(esp_zb_zdp_status_t zdo_status, 
+static void ieeeAddrResponseTimeout(TimerHandle_t xTimer){
+
+    ESP_LOGI(TAG, "IEEE address request timeout");
+
+    if(network_state != ZIGBEE_NWK_NO_PARENT){
+        xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
+        updateNetworkState(ZIGBEE_NWK_NO_PARENT);
+        xSemaphoreGive(zigbee_mutex_handle); 
+
+        //Nofity of network state change
+        if(nwk_state_change_callback != NULL){
+            nwk_state_change_callback(network_state);
+        }
+    }
+}
+
+/***************************************************************************//*!
+*  \brief IEEE address request response callback
+*
+*   This function is called with the response of the IEEE address request
+*   response.
+*   
+*   Preconditions: Zigbee stack is initialized.
+*
+*   Side Effects: None.
+*
+*   \param[in]  zdo_status          ZDO command status.
+*   \param[in]  resp                Pointer to request response.
+*   \param[in]  user_ctx            Pointer to user context (optional).
+*
+*******************************************************************************/
+static void ieeeAddrResponseCallback(esp_zb_zdp_status_t zdo_status, 
                              esp_zb_zdo_ieee_addr_rsp_t *resp, 
                              void *user_ctx){
     
+    //Stop response timeout timer
+    xTimerStop(ieee_req_timer_handle, 10/portTICK_PERIOD_MS);
+
     if(zdo_status != ESP_ZB_ZDP_STATUS_SUCCESS){
         //Failed to reach the network coordo
         ESP_LOGI(TAG, "Failed to detect coordo");
 
-        
         if(network_state != ZIGBEE_NWK_NO_PARENT){
             xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
             updateNetworkState(ZIGBEE_NWK_NO_PARENT);
@@ -138,7 +193,7 @@ static void ieeeAddrResponse(esp_zb_zdp_status_t zdo_status,
     }
     else{
         //Coordo detected
-        
+        ESP_LOGI(TAG, "Coordo detected");
         if(network_state != ZIGBEE_NWK_CONNECTED){
             xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
             updateNetworkState(ZIGBEE_NWK_CONNECTED);
@@ -152,7 +207,7 @@ static void ieeeAddrResponse(esp_zb_zdp_status_t zdo_status,
     }
 
     //re-schedule a IEEE addr request
-    esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReq, 
+    esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReqCallback, 
                            0, 
                            NETWORK_COORDO_DETECT_PERIOD_MS);
 }
@@ -235,7 +290,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
                 }
 
                 //Schedule a IEEE addr request
-                esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReq, 
+                esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReqCallback, 
                                        0, 
                                        NETWORK_COORDO_DETECT_PERIOD_MS);
             }
@@ -328,6 +383,18 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(networkStateChangeCallback_t nwk_change_callback){
         return ZIGBEE_STATUS_ERROR;
     }
 
+    //Create ieee request timer
+    ieee_req_timer_handle = xTimerCreate("IEEE_TIMER",
+                                         NETWORK_COORD_DETECT_TIMEOUT_MS/portTICK_PERIOD_MS,
+                                         pdFALSE,
+                                         NULL,
+                                         ieeeAddrResponseTimeout);
+    
+    if(ieee_req_timer_handle == NULL){
+        ESP_LOGI(TAG, "Failed to create ieee request timer");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
     nvs_flash_init();
 
     //Restore network state from NVS
@@ -404,10 +471,10 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(networkStateChangeCallback_t nwk_change_callback){
         return ZIGBEE_STATUS_ERROR;
     }
 
-    if(IDENTIFY_CLUSTER_STATUS_OK != IDENTIFY_InitCluster(cluster_list)){
+    /*if(IDENTIFY_CLUSTER_STATUS_OK != IDENTIFY_InitCluster(cluster_list)){
         ESP_LOGI(TAG, "Failed to init Identify cluster");
         return ZIGBEE_STATUS_ERROR;
-    }
+    }*/
 
     //Create device enpoint
     esp_zb_ep_list_t *ep_list = esp_zb_ep_list_create();
