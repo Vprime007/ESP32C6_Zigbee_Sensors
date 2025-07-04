@@ -4,6 +4,10 @@ idf_component_register(
                         "userInterface/userInterface.c"
                         "userInterface/buttonController.c"
                         "userInterface/led/ledController.c"
+                        "userInterface/led/ledDriver.c"
+                        "userInterface/led/ledDriver_cfg.c"
+                        "userInterface/sequencer/sequencer.c"
+                        "userInterface/sequencer/sequencer_cfg.c"
 
                         "network/zigbeeManager.c"
                         "network/basicCluster.c"
@@ -17,6 +21,7 @@ idf_component_register(
     INCLUDE_DIRS        ""
                         "userInterface"
                         "userInterface/led"
+                        "userInterface/sequencer"
                         "network"
                         "sensors"
 
