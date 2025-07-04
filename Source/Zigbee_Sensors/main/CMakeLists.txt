@@ -9,6 +9,7 @@ idf_component_register(
                         "network/basicCluster.c"
                         "network/tempMeasCluster.c"
                         "network/humidityMeasCluster.c"
+                        "network/identifyCluster.c"
 
                         "sensors/aht10.c"
                         "sensors/sensorController.c"

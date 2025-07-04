@@ -41,6 +41,8 @@
 /******************************************************************************
 *   Private Functions Declaration
 *******************************************************************************/
+static void networkChangeCallback(ZIGBEE_Nwk_State_t nwk_state);
+
 static void tMainTask(void *pvParameters);
 
 /******************************************************************************
@@ -109,6 +111,54 @@ void app_main(void){
 }
 
 /***************************************************************************//*!
+*  \brief Network change callback.
+*
+*   This function is called at every network state transition with the new
+*   state as parameter.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*******************************************************************************/
+static void networkChangeCallback(ZIGBEE_Nwk_State_t nwk_state){
+
+    ESP_LOGI(TAG, "New network state: %d", nwk_state);
+
+    switch(nwk_state){
+        case ZIGBEE_NWK_NOT_CONNECTED:
+        {
+            UI_PostEvent(UI_EVENT_NOT_CONNECTED, 0);
+        }
+        break;
+
+        case ZIGBEE_NWK_CONNECTED:
+        {
+            UI_PostEvent(UI_EVENT_CONNECTED, 0);
+        }
+        break;
+
+        case ZIGBEE_NWK_NO_PARENT:
+        {
+            UI_PostEvent(UI_EVENT_NO_COORDO, 0);
+        }
+        break;
+
+        case ZIGBEE_NWK_SCANNING:
+        {
+            UI_PostEvent(UI_EVENT_SCANNING, 0);
+        }
+        break;
+
+        default:
+        {
+            //Do nothing...
+        }
+        break;
+    }
+}
+
+/***************************************************************************//*!
 *  \brief Main task.
 *
 *   Main task.
@@ -130,7 +180,7 @@ static void tMainTask(void *pvParameters){
     }
 
     //Init Zigbee stack
-    if(ZIGBEE_STATUS_OK != ZIGBEE_InitStack()){
+    if(ZIGBEE_STATUS_OK != ZIGBEE_InitStack(networkChangeCallback)){
         ESP_LOGI(TAG, "Failed to init Zigbee stack");
     }
     else{

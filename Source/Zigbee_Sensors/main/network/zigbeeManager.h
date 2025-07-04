@@ -40,6 +40,8 @@ typedef enum ZIGBEE_Ret_e{
     ZIGBEE_STATUS_OK,
 }ZIGBEE_Ret_t;
 
+typedef void(*networkStateChangeCallback_t)(ZIGBEE_Nwk_State_t nwk_state);
+
 /******************************************************************************
 *   Public Variables
 *******************************************************************************/
@@ -57,15 +59,19 @@ typedef enum ZIGBEE_Ret_e{
 *  \brief Init Zigbee stack
 *
 *   This function perform the zigbee stack initialization.
-*   
+*   If notification on network state change are desired, set param
+*   nwk_change_callback with a non-NULL value.   
+*
 *   Preconditions: None.
 *
 *   Side Effects: None.
 *
+*   \param[in]  nwk_change_callback     Network state change callback.
+*
 *   \return     Status of operation.   
 *
 *******************************************************************************/
-ZIGBEE_Ret_t ZIGBEE_InitStack(void);
+ZIGBEE_Ret_t ZIGBEE_InitStack(networkStateChangeCallback_t nwk_change_callback);
 
 /***************************************************************************//*!
 *  \brief Zigbee start stack

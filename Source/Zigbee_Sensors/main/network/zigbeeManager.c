@@ -15,6 +15,7 @@
 #include "basicCluster.h"
 #include "tempMeasCluster.h"
 #include "humidityMeasCluster.h"
+#include "identifyCluster.h"
 
 /******************************************************************************
 *   Private Definitions
@@ -61,6 +62,7 @@ static void tZigbeeTask(void *pvParameters);
 *******************************************************************************/
 static ZIGBEE_Nwk_State_t network_state = ZIGBEE_NWK_INVALID;
 static uint8_t network_steering_attempt = 0;
+static networkStateChangeCallback_t nwk_state_change_callback;
 
 static TaskHandle_t zigbee_task_handle = NULL;
 static SemaphoreHandle_t zigbee_mutex_handle = NULL;
@@ -122,23 +124,31 @@ static void ieeeAddrResponse(esp_zb_zdp_status_t zdo_status,
         //Failed to reach the network coordo
         ESP_LOGI(TAG, "Failed to detect coordo");
 
-        xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
+        
         if(network_state != ZIGBEE_NWK_NO_PARENT){
+            xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
             updateNetworkState(ZIGBEE_NWK_NO_PARENT);
+            xSemaphoreGive(zigbee_mutex_handle); 
 
-            //Nofity UI of network state change
+            //Nofity of network state change
+            if(nwk_state_change_callback != NULL){
+                nwk_state_change_callback(network_state);
+            }
         }
-        xSemaphoreGive(zigbee_mutex_handle);        
     }
     else{
         //Coordo detected
-        xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
+        
         if(network_state != ZIGBEE_NWK_CONNECTED){
+            xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
             updateNetworkState(ZIGBEE_NWK_CONNECTED);
+            xSemaphoreGive(zigbee_mutex_handle);
 
-            //Notify UI of network change
+            //Nofity of network state change
+            if(nwk_state_change_callback != NULL){
+                nwk_state_change_callback(network_state);
+            }
         }
-        xSemaphoreGive(zigbee_mutex_handle);
     }
 
     //re-schedule a IEEE addr request
@@ -220,6 +230,10 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
                 updateNetworkState(ZIGBEE_NWK_CONNECTED);
                 xSemaphoreGive(zigbee_mutex_handle);
 
+                if(nwk_state_change_callback != NULL){
+                    nwk_state_change_callback(network_state);
+                }
+
                 //Schedule a IEEE addr request
                 esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReq, 
                                        0, 
@@ -242,6 +256,10 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
                     xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
                     updateNetworkState(ZIGBEE_NWK_NOT_CONNECTED);
                     xSemaphoreGive(zigbee_mutex_handle);
+
+                    if(nwk_state_change_callback != NULL){
+                        nwk_state_change_callback(network_state);
+                    }
                 }
             }
         }
@@ -289,15 +307,19 @@ static void tZigbeeTask(void *pvParameters){
 *  \brief Init Zigbee stack
 *
 *   This function perform the zigbee stack initialization.
-*   
+*   If notification on network state change are desired, set param
+*   nwk_change_callback with a non-NULL value.   
+*
 *   Preconditions: None.
 *
 *   Side Effects: None.
 *
+*   \param[in]  nwk_change_callback     Network state change callback.
+*
 *   \return     Status of operation.   
 *
 *******************************************************************************/
-ZIGBEE_Ret_t ZIGBEE_InitStack(void){
+ZIGBEE_Ret_t ZIGBEE_InitStack(networkStateChangeCallback_t nwk_change_callback){
 
     //Create zigbee mutex
     zigbee_mutex_handle = xSemaphoreCreateMutex();
@@ -341,6 +363,9 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
     network_state = tmp_nwk_state;
     xSemaphoreGive(zigbee_mutex_handle);
 
+    //Register network state change callback
+    if(nwk_change_callback != NULL)     nwk_state_change_callback = nwk_change_callback;
+
     //Platform config
     esp_zb_platform_config_t config = {
         .host_config.host_connection_mode = ZB_HOST_CONNECTION_MODE_NONE,
@@ -376,6 +401,11 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(void){
 
     if(BASIC_CLUSTER_STATUS_OK != BASIC_IntiCluster(cluster_list)){
         ESP_LOGI(TAG, "Failed to init Basic cluster");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
+    if(IDENTIFY_CLUSTER_STATUS_OK != IDENTIFY_InitCluster(cluster_list)){
+        ESP_LOGI(TAG, "Failed to init Identify cluster");
         return ZIGBEE_STATUS_ERROR;
     }
 
@@ -461,6 +491,10 @@ ZIGBEE_Ret_t ZIGBEE_StartScanning(void){
         xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
         updateNetworkState(ZIGBEE_NWK_SCANNING);
         xSemaphoreGive(zigbee_mutex_handle);
+
+        if(nwk_state_change_callback != NULL){
+            nwk_state_change_callback(network_state);
+        }
     }
 
     return ZIGBEE_STATUS_OK;
