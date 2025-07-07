@@ -230,7 +230,7 @@ UI_Ret_t UI_Init(void){
                              "UI task",
                              2048,
                              NULL,
-                             5,
+                             7,
                              &ui_task_handle)){
 
         ESP_LOGI(TAG, "Failed to create UI task");

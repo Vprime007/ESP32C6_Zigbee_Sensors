@@ -1,7 +1,8 @@
 /******************************************************************************
 *   Includes
 *******************************************************************************/
-
+#include "sequencer_cfg.h"
+#include "ledDriver.h"
 
 /******************************************************************************
 *   Private Definitions
@@ -41,7 +42,64 @@
 /******************************************************************************
 *   Public Functions Definitions
 *******************************************************************************/
+SEQUENCER_CFG_Ret_t SEQUENCER_CFG_TurnOn(SEQUENCE_OutputId_t seq_id){
 
+    if(seq_id >= SEQUENCE_ID_NB){
+        return SEQUENCER_CFG_STATUS_ERROR;
+    }
+
+    switch(seq_id){
+        case SEQUENCE_ID_RED_LED:
+        {
+            //Turn red led ON
+        }
+        break;
+
+        case SEQUENCE_ID_GREEN_LED:
+        {
+            //Turn green led ON
+        }
+        break;
+
+        default:
+        {
+            //Do nothing...
+        }
+        break;
+    }
+
+    return SEQUENCER_CFG_STATUS_OK;
+}
+
+SEQUENCER_CFG_Ret_t SEQUENCER_CFG_TurnOff(SEQUENCE_OutputId_t seq_id){
+
+    if(seq_id >= SEQUENCE_ID_NB){
+        return SEQUENCER_CFG_STATUS_ERROR;
+    }
+
+    switch(seq_id){
+
+        case SEQUENCE_ID_RED_LED:
+        {
+            //Turn red led OFF
+        }
+        break;
+
+        case SEQUENCE_ID_GREEN_LED:
+        {
+            //Turn green led OFF
+        }
+        break;
+
+        default:
+        {
+            //Do nothing....
+        }
+        break;
+    }
+
+    return SEQUENCER_CFG_STATUS_OK;
+}
 
 /******************************************************************************
 *   Interrupts

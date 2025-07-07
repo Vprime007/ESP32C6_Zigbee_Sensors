@@ -5,7 +5,7 @@
 #include "freertos/semphr.h"
 
 #include "driver/gpio.h"
-#include "ledDriver_config.h"
+#include "ledDriver_cfg.h"
 
 /******************************************************************************
 *   Private Definitions

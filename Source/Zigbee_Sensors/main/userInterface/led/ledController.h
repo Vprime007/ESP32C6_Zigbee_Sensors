@@ -2,6 +2,7 @@
 #define _LED_CONTROLLER_H
 
 #include <stdint.h>
+#include "ledDriver_cfg.h"
 
 /******************************************************************************
 *   Public Definitions
