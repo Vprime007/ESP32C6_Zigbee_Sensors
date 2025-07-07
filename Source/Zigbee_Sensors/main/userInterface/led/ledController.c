@@ -157,6 +157,18 @@ static void greenLedTimerCallback(TimerHandle_t xTimer){
     xSemaphoreGive(green_led_semph_handle);
 }
 
+/***************************************************************************//*!
+*  \brief Sequencer task
+*
+*   This function is the sequencer task.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  pvParameters            task parameters
+*
+*******************************************************************************/
 static void tSequencerTask(void *pvParameters){
 
     ESP_LOGI(TAG, "Starting Sequencer task");
@@ -168,6 +180,18 @@ static void tSequencerTask(void *pvParameters){
     vTaskDelete(NULL);
 }
 
+/***************************************************************************//*!
+*  \brief Led task
+*
+*   This function is the Led task. It managed all led patterns and transitions.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  pvParameters            task parameters
+*
+*******************************************************************************/
 static void tLedTask(void *pvParameters){
 
     ESP_LOGI(TAG, "Starting Leds task");
@@ -189,12 +213,185 @@ static void tLedTask(void *pvParameters){
     vTaskDelete(NULL);
 }
 
+/***************************************************************************//*!
+*  \brief Process red led event
+*
+*   This function is used to process red led events.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*******************************************************************************/
 static void processRedLedEvent(void){
 
+    LED_Pattern_t pattern = LED_PATTERN_INVALID;
+    static LED_Pattern_Flag_t prev_flag = 0;
+
+    xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+    pattern = red_led_current_pattern;
+    xSemaphoreGive(led_mutex_handle);
+
+    switch(pattern){
+        case LED_PATTERN_BOOT:
+        {
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            red_led_current_pattern = LED_PATTERN_INVALID;
+            xSemaphoreGive(led_mutex_handle);
+
+            //Start sequence
+            prev_flag = 0;
+            SEQUENCER_DoSequence(SEQUENCE_ID_RED_LED, &seq_boot);
+
+            //Schedule led update after the sequence
+            xTimerStop(red_led_timer_handle, 10/portTICK_PERIOD_MS);
+            xTimerChangePeriod(red_led_timer_handle, (5000+500)/portTICK_PERIOD_MS, 10/portTICK_PERIOD_MS);
+            xTimerStart(red_led_timer_handle, 10/portTICK_PERIOD_MS);
+        }
+        break;
+
+        case LED_PATTERN_FACTORY_RESET:
+        {
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            red_led_current_pattern = LED_PATTERN_INVALID;
+            xSemaphoreGive(led_mutex_handle);
+
+            //Start sequence
+            prev_flag = 0;
+            SEQUENCER_DoSequence(SEQUENCE_ID_RED_LED, &seq_factory_reset);
+
+            //Schedule led update after the sequence
+            xTimerStop(red_led_timer_handle, 10/portTICK_PERIOD_MS);
+            xTimerChangePeriod(red_led_timer_handle, (5000+500)/portTICK_PERIOD_MS, 10/portTICK_PERIOD_MS);
+            xTimerStart(red_led_timer_handle, 10/portTICK_PERIOD_MS);
+        }
+        break;
+
+        case LED_PATTERN_INVALID:
+        default:
+        {
+            LED_Pattern_Flag_t led_flag = 0;
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            red_led_buffered_pattern = LED_PATTERN_INVALID;
+            led_flag = red_led_flag;
+            xSemaphoreGive(led_mutex_handle);
+
+            if((led_flag & LED_FLAG_IDENTIFY) == LED_FLAG_IDENTIFY){
+
+                if((prev_flag & LED_FLAG_IDENTIFY) != LED_FLAG_IDENTIFY){
+                    prev_flag = LED_FLAG_IDENTIFY;
+                    SEQUENCER_DoSequence(SEQUENCE_ID_RED_LED, &seq_identify);
+                }
+            }
+            else if((led_flag & LED_FLAG_NO_COORDO) == LED_FLAG_NO_COORDO){
+
+                if((prev_flag & LED_FLAG_NO_COORDO) != LED_FLAG_NO_COORDO){
+                    prev_flag = LED_FLAG_NO_COORDO;
+                    SEQUENCER_DoSequence(SEQUENCE_ID_RED_LED, &seq_always_on);
+                }
+            }
+            else{
+                prev_flag = 0;
+                SEQUENCER_DoSequence(SEQUENCE_ID_RED_LED, &seq_always_off);
+            }
+        }
+        break;
+    }
 }
 
+/***************************************************************************//*!
+*  \brief Process green led event
+*
+*   This function is used to process green led events.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*******************************************************************************/
 static void processGreenLedEvent(void){
 
+    LED_Pattern_t pattern = LED_PATTERN_INVALID;
+    static LED_Pattern_Flag_t prev_flag = 0;
+
+    xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+    pattern = green_led_current_pattern;
+    xSemaphoreGive(led_mutex_handle);
+
+    switch(pattern){
+        case LED_PATTERN_BOOT:
+        {
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            green_led_current_pattern = LED_PATTERN_INVALID;
+            xSemaphoreGive(led_mutex_handle);
+
+            //Start sequence
+            prev_flag = 0;
+            SEQUENCER_DoSequence(SEQUENCE_ID_GREEN_LED, &seq_boot);
+
+            //Schedule led update after the sequence
+            xTimerStop(green_led_timer_handle, 10/portTICK_PERIOD_MS);
+            xTimerChangePeriod(green_led_timer_handle, (5000+500)/portTICK_PERIOD_MS, 10/portTICK_PERIOD_MS);
+            xTimerStart(green_led_timer_handle, 10/portTICK_PERIOD_MS);
+        }
+        break;
+
+        case LED_PATTERN_FACTORY_RESET:
+        {
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            green_led_current_pattern = LED_PATTERN_INVALID;
+            xSemaphoreGive(led_mutex_handle);
+
+            //Start sequence
+            prev_flag = 0;
+            SEQUENCER_DoSequence(SEQUENCE_ID_GREEN_LED, &seq_factory_reset);
+
+            //Schedule led update after the sequence
+            xTimerStop(green_led_timer_handle, 10/portTICK_PERIOD_MS);
+            xTimerChangePeriod(green_led_timer_handle, (5000+500)/portTICK_PERIOD_MS, 10/portTICK_PERIOD_MS);
+            xTimerStart(green_led_timer_handle, 10/portTICK_PERIOD_MS);
+        }
+        break;
+
+        case LED_PATTERN_INVALID:
+        default:
+        {
+            LED_Pattern_Flag_t led_flag = 0;
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            green_led_buffered_pattern = LED_PATTERN_INVALID;
+            led_flag = green_led_flag;
+            xSemaphoreGive(led_mutex_handle);
+
+            if((led_flag & LED_FLAG_IDENTIFY) == LED_FLAG_IDENTIFY){
+
+                if((prev_flag & LED_FLAG_IDENTIFY) != LED_FLAG_IDENTIFY){
+                    prev_flag = LED_FLAG_IDENTIFY;
+                    SEQUENCER_DoSequence(SEQUENCE_ID_GREEN_LED, &seq_identify);
+                }
+            }
+            else if((led_flag & LED_FLAG_SCANNING) == LED_FLAG_SCANNING){
+
+                if((prev_flag & LED_FLAG_SCANNING) != LED_FLAG_SCANNING){
+                    prev_flag = LED_FLAG_SCANNING;
+                    SEQUENCER_DoSequence(SEQUENCE_ID_GREEN_LED, &seq_scanning);
+                }
+            }
+            else if((led_flag & LED_FLAG_CONNECTED) == LED_FLAG_CONNECTED){
+
+                if((prev_flag & LED_FLAG_CONNECTED) != LED_FLAG_CONNECTED){
+                    prev_flag = LED_FLAG_CONNECTED;
+                    SEQUENCER_DoSequence(SEQUENCE_ID_GREEN_LED, &seq_always_on);
+                }
+            }
+            else{
+                prev_flag = 0;
+                SEQUENCER_DoSequence(SEQUENCE_ID_GREEN_LED, &seq_always_off);
+            }
+        }
+        break;
+    }
 }
 
 /******************************************************************************
