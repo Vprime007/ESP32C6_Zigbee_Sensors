@@ -397,6 +397,18 @@ static void processGreenLedEvent(void){
 /******************************************************************************
 *   Public Functions Definitions
 *******************************************************************************/
+/***************************************************************************/ /*!
+*  \brief LED controller initialization.
+*
+*   Function to initialized the LED controller module.
+*
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*   
+*   \return operation status
+*
+*******************************************************************************/
 LED_Ret_t LED_InitController(uint8_t led_strip_gpio){
     
     ESP_LOGI(TAG, "LED controller initialization");
@@ -499,6 +511,20 @@ LED_Ret_t LED_InitController(uint8_t led_strip_gpio){
     return LED_STATUS_OK;
 }
 
+/***************************************************************************/ /*!
+*  \brief Start Led pattern
+*
+*   Function used to start a Led pattern.
+*
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*   
+*   \param[in]  pattern         Led pattern to start   
+*
+*   \return operation status
+*
+*******************************************************************************/
 LED_Ret_t LED_StartPattern(LED_Pattern_t pattern){
 
     if(pattern >= LED_PATTERN_INVALID){
@@ -560,6 +586,20 @@ LED_Ret_t LED_StartPattern(LED_Pattern_t pattern){
     return LED_STATUS_OK;
 }
 
+/***************************************************************************/ /*!
+*  \brief Stop Led pattern
+*
+*   Function used to stop an active Led pattern.
+*
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*   
+*   \param[in]  pattern         Led pattern to stop  
+*
+*   \return operation status
+*
+*******************************************************************************/
 LED_Ret_t LED_StopPattern(LED_Pattern_t pattern){
 
     if(pattern >= LED_PATTERN_INVALID){
