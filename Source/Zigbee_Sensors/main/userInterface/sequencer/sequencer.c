@@ -37,9 +37,7 @@ typedef struct SEQUENCE_Info_s{
 /******************************************************************************
 *   Private Functions Declaration
 *******************************************************************************/
-static void applySequenceOn(SEQUENCE_Info_t *pSequence);
-static void applySequenceOff(SEQUENCE_Info_t *pSequence);
-static void stopSequence(SEQUENCE_Info_t *pSequence);
+
 
 /******************************************************************************
 *   Public Variables
@@ -54,67 +52,7 @@ static SEQUENCE_Info_t sequence_info_table[SEQUENCE_ID_NB] = {0};
 /******************************************************************************
 *   Private Functions Definitions
 *******************************************************************************/
-/***************************************************************************/ /*!
-*  \brief Apply sequence ON.
-*
-*   Apply sequence ON to output.
-*
-*   Preconditions: None.
-*
-*   Side Effects: None.
-*   
-*   \param[in]  pSequence           Pointer to sequence info.
-*
-*******************************************************************************/
-static void applySequenceOn(SEQUENCE_Info_t *pSequence){
-    
-    if(pSequence != NULL){
-        SEQUENCER_CFG_TurnOn(pSequence->output_id);
-        pSequence->time_cptr = 0;
-        pSequence->state = SEQUENCE_STATE_OUTPUT_ON;
-    }
-}
 
-/***************************************************************************/ /*!
-*  \brief Apply sequence OFF.
-*
-*   Apply sequence OFF to output.
-*
-*   Preconditions: None.
-*
-*   Side Effects: None.
-*   
-*   \param[in]  pSequence           Pointer to sequence info.
-*
-*******************************************************************************/
-static void applySequenceOff(SEQUENCE_Info_t *pSequence){
-
-    if(pSequence != NULL){
-        SEQUENCER_CFG_TurnOff(pSequence->output_id);
-        pSequence->time_cptr = 0;
-        pSequence->state = SEQUENCE_STATE_OUTPUT_OFF;
-    }
-}
-
-/***************************************************************************/ /*!
-*  \brief Stop sequence.
-*
-*   Stop the sequence.
-*
-*   Preconditions: None.
-*
-*   Side Effects: None.
-*   
-*   \param[in]  pSequence           Pointer to sequence info.
-*
-*******************************************************************************/
-static void stopSequence(SEQUENCE_Info_t *pSequence){
-
-    if(pSequence != NULL){
-        SEQUENCER_CFG_TurnOff(pSequence->output_id);
-        pSequence->state = SEQUENCE_STATE_IDLE;
-    }
-}
 
 /******************************************************************************
 *   Public Functions Definitions
@@ -155,7 +93,9 @@ SEQUENCER_Ret_t SEQUENCER_DoSequence(SEQUENCE_OutputId_t output_id, SEQUENCE_t *
     if((sequence_info_table[output_id].pSequence->init_time_off == 0) && 
        (sequence_info_table[output_id].pSequence->time_on)){
 
-        applySequenceOn(&sequence_info_table[output_id]);
+        SEQUENCER_CFG_TurnOn(sequence_info_table[output_id].output_id);
+        sequence_info_table[output_id].time_cptr = 0;
+        sequence_info_table[output_id].state = SEQUENCE_STATE_OUTPUT_ON;
     }
     else{
         sequence_info_table[output_id].state = SEQUENCE_STATE_START;
@@ -193,15 +133,20 @@ void SEQUENCER_Tic(void){
 
                     //check if the sequence has a ON time
                     if(pSequence_info->pSequence->time_on != 0){
-                        applySequenceOn(pSequence_info);
+                        SEQUENCER_CFG_TurnOn(pSequence_info->output_id);
+                        pSequence_info->time_cptr = 0;
+                        pSequence_info->state = SEQUENCE_STATE_OUTPUT_ON;
                     }
                     else if(pSequence_info->pSequence->time_off != 0){
                         //Check if th sequence has OFF time
-                        applySequenceOff(pSequence_info);
+                        SEQUENCER_CFG_TurnOff(pSequence_info->output_id);
+                        pSequence_info->time_cptr = 0;
+                        pSequence_info->state = SEQUENCE_STATE_OUTPUT_OFF;
                     }
                     else{
                         //No ON/OFF time in the sequence... STOP it!
-                        stopSequence(pSequence_info);
+                        SEQUENCER_CFG_TurnOff(pSequence_info->output_id);
+                        pSequence_info->state = SEQUENCE_STATE_IDLE;
                     }
                 }
             }
@@ -215,11 +160,14 @@ void SEQUENCER_Tic(void){
 
                         //check if the seqeunce need to go OFF
                         if(pSequence_info->pSequence->time_off != 0){
-                            applySequenceOff(pSequence_info);
+                            SEQUENCER_CFG_TurnOff(pSequence_info->output_id);
+                            pSequence_info->time_cptr = 0;
+                            pSequence_info->state = SEQUENCE_STATE_OUTPUT_OFF;
                         }
                         else{
                             //The sequence does not go OFF -> Stop it!
-                            stopSequence(pSequence_info);
+                            SEQUENCER_CFG_TurnOff(pSequence_info->output_id);
+                            pSequence_info->state = SEQUENCE_STATE_IDLE;
                         }
                     }
                     else{
@@ -241,16 +189,21 @@ void SEQUENCER_Tic(void){
 
                         //check if we need to repeat the sequence forever
                         if(pSequence_info->repeat_cptr == SEQUENCE_REPEAT_FOREVER){
-                            applySequenceOn(pSequence_info);
+                            SEQUENCER_CFG_TurnOn(pSequence_info->output_id);
+                            pSequence_info->time_cptr = 0;
+                            pSequence_info->state = SEQUENCE_STATE_OUTPUT_ON;
                         }
                         else{
                             pSequence_info->repeat_cptr++;
                             if(pSequence_info->repeat_cptr >= pSequence_info->pSequence->nb_repeat){
                                 //Number of repeat reached... Stop it!
-                                stopSequence(pSequence_info);
+                                SEQUENCER_CFG_TurnOff(pSequence_info->output_id);
+                                pSequence_info->state = SEQUENCE_STATE_IDLE;
                             }
                             else{
-                                applySequenceOn(pSequence_info);
+                                SEQUENCER_CFG_TurnOn(pSequence_info->output_id);
+                                pSequence_info->time_cptr = 0;
+                                pSequence_info->state = SEQUENCE_STATE_OUTPUT_ON;
                             }
                         }
                     }
