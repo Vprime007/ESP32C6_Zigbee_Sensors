@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "ledDriver_cfg.h"
+#include "ledDriver.h"
 
 /******************************************************************************
 *   Public Definitions
@@ -28,6 +29,13 @@ typedef enum LED_Pattern_e{
 
     LED_PATTERN_INVALID,
 }LED_Pattern_t;
+
+typedef enum LED_Ctrl_Id_e{
+    LED_CTRL_ID_RED,
+    LED_CTRL_ID_GREEN,
+
+    LED_CTRL_ID_INVALID,
+}LED_Ctrl_Id_t;
 
 typedef enum LED_Ret_e{
     LED_STATUS_ERROR,
@@ -59,7 +67,7 @@ typedef enum LED_Ret_e{
 *   \return operation status
 *
 *******************************************************************************/
-LED_Ret_t LED_InitController(uint8_t led_strip_gpio);
+LED_Ret_t LED_InitController(void);
 
 /***************************************************************************/ /*!
 *  \brief Start Led pattern
@@ -92,5 +100,22 @@ LED_Ret_t LED_StartPattern(LED_Pattern_t pattern);
 *
 *******************************************************************************/
 LED_Ret_t LED_StopPattern(LED_Pattern_t pattern);
+
+/***************************************************************************/ /*!
+*  \brief Get led handle
+*
+*   This function is used to get the led driver handle of a led entity.
+*
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  led_id              Led ID
+*   \param[out] pHandle             Pointer to store the correspondig led handle.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
+LED_Ret_t LED_GetLedHandle(LED_Ctrl_Id_t led_id, LED_Handle_t *pHandle);
 
 #endif//_LED_CONTROLLER_H

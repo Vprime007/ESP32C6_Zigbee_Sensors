@@ -40,8 +40,38 @@ typedef enum SEQUENCER_CFG_Ret_e{
 /******************************************************************************
 *   Public Functions
 *******************************************************************************/
+/***************************************************************************/ /*!
+*  \brief Sequencer turn output ON.
+*
+*   This function is used to interface the sequencer module with the outputs.
+*   It turn an Output ON.
+*
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*   
+*   \param[in]  seq_id                  Sequence Output ID.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
 SEQUENCER_CFG_Ret_t SEQUENCER_CFG_TurnOn(SEQUENCE_OutputId_t seq_id);
 
+/***************************************************************************/ /*!
+*  \brief Sequencer turn output OFF.
+*
+*   This function is used to interface the sequencer module with the outputs.
+*   It turn an Output OFF.
+*
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*   
+*   \param[in]  seq_id                  Sequence Output ID.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
 SEQUENCER_CFG_Ret_t SEQUENCER_CFG_TurnOff(SEQUENCE_OutputId_t seq_id);
 
 #endif//_SEQUENCER_CFG_H

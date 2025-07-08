@@ -11,7 +11,6 @@
 #include "esp_log.h"
 
 #include "ledController.h"
-#include "ledDriver.h"
 #include "sequencer.h"
 
 /******************************************************************************
@@ -409,7 +408,7 @@ static void processGreenLedEvent(void){
 *   \return operation status
 *
 *******************************************************************************/
-LED_Ret_t LED_InitController(uint8_t led_strip_gpio){
+LED_Ret_t LED_InitController(void){
     
     ESP_LOGI(TAG, "LED controller initialization");
 
@@ -779,6 +778,55 @@ LED_Ret_t LED_StopPattern(LED_Pattern_t pattern){
         }
         break;
     }
+
+    return LED_STATUS_OK;
+}
+
+/***************************************************************************/ /*!
+*  \brief Get led handle
+*
+*   This function is used to get the led driver handle of a led entity.
+*
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  led_id              Led ID
+*   \param[out] pHandle             Pointer to store the correspondig led handle.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
+LED_Ret_t LED_GetLedHandle(LED_Ctrl_Id_t led_id, LED_Handle_t *pHandle){
+
+    if((led_id >= LED_CTRL_ID_INVALID) || (pHandle == NULL)){
+
+        return LED_STATUS_ERROR;
+    }
+
+    xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+    
+    switch(led_id){
+        case LED_CTRL_ID_RED:
+        {
+            *pHandle = red_led_handle;
+        }
+        break;
+
+        case LED_CTRL_ID_GREEN:
+        {
+            *pHandle = green_led_handle;
+        }
+        break;
+
+        default:
+        {
+            //Do nothing...
+        }
+        break;
+    }
+    
+    xSemaphoreGive(led_mutex_handle);
 
     return LED_STATUS_OK;
 }

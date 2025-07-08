@@ -8,6 +8,7 @@
 #include "esp_log.h"
 
 #include "userInterface.h"
+#include "ledController.h"
 #include "buttonController.h"
 #include "zigbeeManager.h"
 
@@ -117,18 +118,28 @@ static void tUiTask(void *pvParameters){
                 case UI_EVENT_BOOT:
                 {
                     ESP_LOGI(TAG, "Processing BOOT event");
+                    LED_StartPattern(LED_PATTERN_BOOT);
                 }
                 break;
 
                 case UI_EVENT_FACTORY_RESET:
                 {
                     ESP_LOGI(TAG, "Processing FACTORY_RESET event");
+                    LED_StartPattern(LED_PATTERN_FACTORY_RESET);
                 }
                 break;
 
-                case UI_EVENT_IDENTIFY:
+                case UI_EVENT_START_IDENTIFY:
                 {
-                    ESP_LOGI(TAG, "Processing IDENTIFY event");
+                    ESP_LOGI(TAG, "Processing START_IDENTIFY event");
+                    LED_StartPattern(LED_PATTERN_IDENTIFY);
+                }
+                break;
+
+                case UI_EVENT_STOP_IDENTIFY:
+                {
+                    ESP_LOGI(TAG, "Processing STOP_IDENITFY event");
+                    LED_StopPattern(LED_PATTERN_IDENTIFY);
                 }
                 break;
 
@@ -153,24 +164,36 @@ static void tUiTask(void *pvParameters){
                 case UI_EVENT_CONNECTED:
                 {
                     ESP_LOGI(TAG, "Processing CONNECTED event");
+                    LED_StopPattern(LED_PATTERN_SCANNING);
+                    LED_StopPattern(LED_PATTERN_NO_COORDO);
+                    LED_StartPattern(LED_PATTERN_CONNECTED);
                 }
                 break;
 
                 case UI_EVENT_NOT_CONNECTED:
                 {
                     ESP_LOGI(TAG, "Processing NOT_CONNECTED event");
+                    LED_StopPattern(LED_PATTERN_CONNECTED);
+                    LED_StopPattern(LED_PATTERN_SCANNING);
+                    LED_StopPattern(LED_PATTERN_NO_COORDO);
                 }
                 break;
 
                 case UI_EVENT_NO_COORDO:
                 {
                     ESP_LOGI(TAG, "Processing NO_COORDO event");
+                    LED_StopPattern(LED_PATTERN_CONNECTED);
+                    LED_StopPattern(LED_PATTERN_SCANNING);
+                    LED_StartPattern(LED_PATTERN_NO_COORDO);
                 }
                 break;
 
                 case UI_EVENT_SCANNING:
                 {
                     ESP_LOGI(TAG, "Processing SCANNING event");
+                    LED_StopPattern(LED_PATTERN_CONNECTED);
+                    LED_StopPattern(LED_PATTERN_NO_COORDO);
+                    LED_StartPattern(LED_PATTERN_SCANNING);
                 }
                 break;
 
@@ -222,6 +245,12 @@ UI_Ret_t UI_Init(void){
     };
     if(BUTTON_STATUS_OK != BUTTON_InitController(&btn_cfg)){
         ESP_LOGI(TAG, "Failed to init button controller");
+        return UI_STATUS_ERROR;
+    }
+
+    //Init led controller
+    if(LED_STATUS_OK != LED_InitController()){
+        ESP_LOGI(TAG, "Failed to init leds controller");
         return UI_STATUS_ERROR;
     }
 

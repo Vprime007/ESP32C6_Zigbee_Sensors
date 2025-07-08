@@ -41,7 +41,6 @@ static void applySequenceOn(SEQUENCE_Info_t *pSequence);
 static void applySequenceOff(SEQUENCE_Info_t *pSequence);
 static void stopSequence(SEQUENCE_Info_t *pSequence);
 
-
 /******************************************************************************
 *   Public Variables
 *******************************************************************************/
@@ -88,7 +87,7 @@ static void applySequenceOn(SEQUENCE_Info_t *pSequence){
 *   \param[in]  pSequence           Pointer to sequence info.
 *
 *******************************************************************************/
-static void applySeqeunceOff(SEQUENCE_Info_t *pSequence){
+static void applySequenceOff(SEQUENCE_Info_t *pSequence){
 
     if(pSequence != NULL){
         SEQUENCER_CFG_TurnOff(pSequence->output_id);
