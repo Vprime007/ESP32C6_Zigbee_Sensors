@@ -536,42 +536,125 @@ LED_Ret_t LED_StartPattern(LED_Pattern_t pattern){
         case LED_PATTERN_BOOT:
         {
             ESP_LOGI(TAG, "Starting Boot pattern");
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            red_led_current_pattern = LED_PATTERN_BOOT;
+            red_led_buffered_pattern = LED_PATTERN_BOOT;
+
+            green_led_current_pattern = LED_PATTERN_BOOT;
+            green_led_buffered_pattern = LED_PATTERN_BOOT;
+            xSemaphoreGive(led_mutex_handle);
+
+            //Stop any running timer
+            xTimerStop(red_led_timer_handle, 10/portTICK_PERIOD_MS);
+            xTimerStop(green_led_timer_handle, 10/portTICK_PERIOD_MS);
+
+            //Notify the task to apply new pattern
+            xSemaphoreGive(red_led_semph_handle);
+            xSemaphoreGive(green_led_semph_handle);
         }
         break;
 
         case LED_PATTERN_FACTORY_RESET:
         {
             ESP_LOGI(TAG, "Starting Factory Reset pattern");
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            red_led_current_pattern = LED_PATTERN_FACTORY_RESET;
+            red_led_buffered_pattern = LED_PATTERN_FACTORY_RESET;
+
+            green_led_current_pattern = LED_PATTERN_FACTORY_RESET;
+            green_led_buffered_pattern = LED_PATTERN_FACTORY_RESET;
+            xSemaphoreGive(led_mutex_handle);
+
+            //Stop any running timer
+            xTimerStop(red_led_timer_handle, 10/portTICK_PERIOD_MS);
+            xTimerStop(green_led_timer_handle, 10/portTICK_PERIOD_MS);
+
+            //Notify the task to apply new pattern
+            xSemaphoreGive(red_led_semph_handle);
+            xSemaphoreGive(green_led_semph_handle);
         }
         break;
 
         case LED_PATTERN_IDENTIFY:
         {
             ESP_LOGI(TAG, "Starting Identify pattern");
+
+            LED_Pattern_t red_buffered_pattern = LED_PATTERN_INVALID;
+            LED_Pattern_t green_buffered_pattern = LED_PATTERN_INVALID;
+
+            xSemaphoreTake(led_mutex_handle, portTICK_PERIOD_MS);
+            red_led_flag |= LED_FLAG_IDENTIFY;
+            red_buffered_pattern = red_led_buffered_pattern;
+
+            green_led_flag |= LED_FLAG_IDENTIFY;
+            green_buffered_pattern = green_led_buffered_pattern;
+            xSemaphoreGive(led_mutex_handle);
+
+            if(red_buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(red_led_semph_handle);
+            }
+
+            if(green_buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(green_led_semph_handle);
+            }
         }
         break;
 
         case LED_PATTERN_CONNECTED:
         {
             ESP_LOGI(TAG, "Starting Connected pattern");
-        }
-        break;
 
-        case LED_PATTERN_NOT_CONNECTED:
-        {
-            ESP_LOGI(TAG, "Starting Not-Connected pattern");
+            LED_Pattern_t buffered_pattern = LED_PATTERN_INVALID;
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            green_led_flag |= LED_FLAG_CONNECTED;
+            buffered_pattern = green_led_buffered_pattern;
+            xSemaphoreGive(led_mutex_handle);
+
+            if(buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(green_led_semph_handle);
+            }
         }
         break;
 
         case LED_PATTERN_NO_COORDO:
         {
             ESP_LOGI(TAG, "Starting No-Coordo pattern");
+
+            LED_Pattern_t buffered_pattern = LED_PATTERN_INVALID;
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            red_led_flag |= LED_FLAG_NO_COORDO;
+            buffered_pattern = red_led_buffered_pattern;
+            xSemaphoreGive(led_mutex_handle);
+        
+            if(buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(red_led_semph_handle);
+            }
         }
         break;
 
         case LED_PATTERN_SCANNING:
         {
             ESP_LOGI(TAG, "Starting Scanning pattern");
+
+            LED_Pattern_t buffered_pattern = LED_PATTERN_INVALID;
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            green_led_flag |= LED_FLAG_SCANNING;
+            buffered_pattern = green_led_buffered_pattern;
+            xSemaphoreGive(led_mutex_handle);
+
+            if(buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(green_led_semph_handle);
+            }
         }
         break;
 
@@ -611,30 +694,81 @@ LED_Ret_t LED_StopPattern(LED_Pattern_t pattern){
         case LED_PATTERN_IDENTIFY:
         {
             ESP_LOGI(TAG, "Stopping Identify pattern");
+
+            LED_Pattern_t red_buffered_pattern = LED_PATTERN_INVALID;
+            LED_Pattern_t green_buffered_pattern = LED_PATTERN_INVALID;
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            red_led_flag &= ~LED_FLAG_IDENTIFY;
+            red_buffered_pattern = red_led_buffered_pattern;
+
+            green_led_flag &= ~LED_FLAG_IDENTIFY;
+            green_buffered_pattern = green_led_buffered_pattern;
+            xSemaphoreGive(led_mutex_handle);
+
+            if(red_buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(red_led_semph_handle);
+            }
+
+            if(green_buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(green_led_semph_handle);
+            }
         }
         break;
 
         case LED_PATTERN_CONNECTED:
         {
             ESP_LOGI(TAG, "Stopping Connected pattern");
-        }
-        break;
 
-        case LED_PATTERN_NOT_CONNECTED:
-        {
-            ESP_LOGI(TAG, "Stopping Not-Connected pattern");
+            LED_Pattern_t buffered_pattern = LED_PATTERN_INVALID;
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            green_led_flag &= ~LED_FLAG_CONNECTED;
+            buffered_pattern = green_led_buffered_pattern;
+            xSemaphoreGive(led_mutex_handle);
+
+            if(buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(green_led_semph_handle);
+            }
         }
         break;
 
         case LED_PATTERN_NO_COORDO:
         {
             ESP_LOGI(TAG, "Stopping No-Coordo pattern");
+
+            LED_Pattern_t buffered_pattern = LED_PATTERN_INVALID;
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            red_led_flag &= ~LED_FLAG_NO_COORDO;
+            buffered_pattern = red_led_buffered_pattern;
+            xSemaphoreGive(led_mutex_handle);
+
+            if(buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(red_led_semph_handle);
+            }
         }
         break;
 
         case LED_PATTERN_SCANNING:
         {
             ESP_LOGI(TAG, "Stopping Scanning pattern");
+
+            LED_Pattern_t buffered_pattern = LED_PATTERN_INVALID;
+
+            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
+            green_led_flag &= ~LED_FLAG_SCANNING;
+            buffered_pattern = green_led_buffered_pattern;
+            xSemaphoreGive(led_mutex_handle);
+
+            if(buffered_pattern == LED_PATTERN_INVALID){
+                //Re-apply invalid pattern
+                xSemaphoreGive(green_led_semph_handle);
+            }
         }
         break;
 
