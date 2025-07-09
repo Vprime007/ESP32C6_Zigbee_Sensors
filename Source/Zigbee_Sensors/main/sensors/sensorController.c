@@ -12,6 +12,7 @@
 #include "sensorController.h"
 #include "aht10.h"
 #include "zigbeeManager.h"
+#include "main.h"
 
 /******************************************************************************
 *   Private Definitions
@@ -217,8 +218,8 @@ SENSOR_Ret_t SENSOR_InitController(void){
     }
 
     //Init AHT10
-    if(AHT10_STATUS_OK != AHT10_Init(7,
-                                     6,
+    if(AHT10_STATUS_OK != AHT10_Init(HWI_AHT10_SCL_GPIO,
+                                     HWI_AHT10_SDA_GPIO,
                                      wait_ms)){
 
         ESP_LOGI(TAG, "Failed to init AHT10");

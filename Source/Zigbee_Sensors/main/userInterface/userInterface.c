@@ -8,6 +8,7 @@
 #include "esp_log.h"
 
 #include "userInterface.h"
+#include "main.h"
 #include "ledController.h"
 #include "buttonController.h"
 #include "zigbeeManager.h"
@@ -239,7 +240,7 @@ UI_Ret_t UI_Init(void){
     //Init button controller
     BUTTON_Config_t btn_cfg = {
         .active_level = BUTTON_ACTIVE_LOW,
-        .gpio = 9,
+        .gpio = HWI_USER_BUTTON_GPIO,
         .shortpress_callback = shortpressCallback,
         .longpress_callback = longpressCallback,
     };

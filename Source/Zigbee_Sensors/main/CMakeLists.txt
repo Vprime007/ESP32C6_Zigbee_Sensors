@@ -18,7 +18,7 @@ idf_component_register(
                         "sensors/aht10.c"
                         "sensors/sensorController.c"
 
-    INCLUDE_DIRS        ""
+    INCLUDE_DIRS        "."
                         "userInterface"
                         "userInterface/led"
                         "userInterface/sequencer"

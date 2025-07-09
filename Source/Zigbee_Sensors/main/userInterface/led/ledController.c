@@ -12,6 +12,7 @@
 
 #include "ledController.h"
 #include "sequencer.h"
+#include "main.h"
 
 /******************************************************************************
 *   Private Definitions
@@ -463,7 +464,7 @@ LED_Ret_t LED_InitController(void){
 
     LDRV_CFG_Single_Pwm_Config_t red_led_cfg = {
         .active_level = LDRV_CFG_ACTIVE_HIGH,
-        .gpio_num = 18,
+        .gpio_num = HWI_RED_LED_GPIO,
         .led_channel = LEDC_CHANNEL_0,
         .led_timer = LEDC_TIMER_0,
     };
@@ -474,7 +475,7 @@ LED_Ret_t LED_InitController(void){
 
     LDRV_CFG_Single_Pwm_Config_t green_led_cfg = {
         .active_level = LDRV_CFG_ACTIVE_HIGH,
-        .gpio_num = 19,
+        .gpio_num = HWI_GREEN_LED_GPIO,
         .led_channel = LEDC_CHANNEL_1,
         .led_timer = LEDC_TIMER_1,
     };
