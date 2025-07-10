@@ -471,10 +471,10 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(networkStateChangeCallback_t nwk_change_callback){
         return ZIGBEE_STATUS_ERROR;
     }
 
-    /*if(IDENTIFY_CLUSTER_STATUS_OK != IDENTIFY_InitCluster(cluster_list)){
+    if(IDENTIFY_CLUSTER_STATUS_OK != IDENTIFY_InitCluster(cluster_list)){
         ESP_LOGI(TAG, "Failed to init Identify cluster");
         return ZIGBEE_STATUS_ERROR;
-    }*/
+    }
 
     //Create device enpoint
     esp_zb_ep_list_t *ep_list = esp_zb_ep_list_create();
@@ -491,6 +491,23 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(networkStateChangeCallback_t nwk_change_callback){
 
     if(ESP_OK != esp_zb_device_register(ep_list)){
         ESP_LOGI(TAG, "Failed to register device");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
+    //Config cluster attrib reporting
+    if(TEMP_CLUSTER_STATUS_OK != TEMP_SetupReporting()){
+        ESP_LOGI(TAG, "Failed to setup Temp cluster reporting");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
+    if(HUMIDITY_CLUSTER_STATUS_OK != HUMIDITY_SetupReporting()){
+        ESP_LOGI(TAG, "Failed to setup Humidity cluster reporting");
+        return ZIGBEE_STATUS_ERROR;
+    }
+
+    //Config Identify cluster cmd handler
+    if(IDENTIFY_CLUSTER_STATUS_OK != IDENTIFY_SetupCmdHandler()){
+        ESP_LOGI(TAG, "Failed to setup Identify cluster cmd handler");
         return ZIGBEE_STATUS_ERROR;
     }
 

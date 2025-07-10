@@ -55,6 +55,20 @@ typedef enum HUMIDITY_Cluster_Ret_e{
 HUMIDITY_Cluster_Ret_t HUMIDITY_InitCluster(esp_zb_cluster_list_t *pCluster_list);
 
 /***************************************************************************//*!
+*  \brief Humidity cluster reporting setup.
+*
+*   Setup Humidity cluster attributes reporting parameters.  
+*   
+*   Preconditions: This function must be called AFTER esp_zb_device_register().
+*
+*   Side Effects: None. 
+*
+*   \return     Operation status
+*
+*******************************************************************************/
+HUMIDITY_Cluster_Ret_t HUMIDITY_SetupReporting(void);
+
+/***************************************************************************//*!
 *  \brief Set Humdity measurement value.
 *
 *   Set the Humidity Measurmeent attirbute value.

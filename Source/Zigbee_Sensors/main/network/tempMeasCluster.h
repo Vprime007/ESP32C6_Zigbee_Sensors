@@ -55,6 +55,20 @@ typedef enum TEMP_Cluster_Ret_e{
 TEMP_Cluster_Ret_t TEMP_InitCluster(esp_zb_cluster_list_t *pCluster_list);
 
 /***************************************************************************//*!
+*  \brief Temperate cluster reporting setup.
+*
+*   Setup Temperature cluster attributes reporting parameters.  
+*   
+*   Preconditions: This function must be called AFTER esp_zb_device_register().
+*
+*   Side Effects: None. 
+*
+*   \return     Operation status
+*
+*******************************************************************************/
+TEMP_Cluster_Ret_t TEMP_SetupReporting(void);
+
+/***************************************************************************//*!
 *  \brief Set Temperature measurement value.
 *
 *   Set the Temperature Measurmeent attirbute value.

@@ -88,6 +88,23 @@ IDENTIFY_Cluster_Ret_t IDENTIFY_InitCluster(esp_zb_cluster_list_t *pCluster_list
         return IDENTIFY_CLUSTER_STATUS_ERROR;
     }
 
+    return IDENTIFY_CLUSTER_STATUS_OK;
+}
+
+/***************************************************************************//*!
+*  \brief Setup Identify cluster cmd handler.
+*
+*   Setup and register Identify cluster cmd handler.
+*   
+*   Preconditions: This function must be called AFTER esp_zb_device_register().
+*
+*   Side Effects: None. 
+*
+*   \return     Operation status
+*
+*******************************************************************************/
+IDENTIFY_Cluster_Ret_t IDENTIFY_SetupCmdHandler(void){
+
     //Register Identify callback
     esp_zb_identify_notify_handler_register(ZIGBEE_ENDPOINT_1,
                                             (esp_zb_identify_notify_callback_t)identifyCallback);

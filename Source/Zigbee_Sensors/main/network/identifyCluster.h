@@ -52,4 +52,18 @@ typedef enum IDENTIFY_Cluster_Ret_e{
 *******************************************************************************/
 IDENTIFY_Cluster_Ret_t IDENTIFY_InitCluster(esp_zb_cluster_list_t *pCluster_list);
 
+/***************************************************************************//*!
+*  \brief Setup Identify cluster cmd handler.
+*
+*   Setup and register Identify cluster cmd handler.
+*   
+*   Preconditions: This function must be called AFTER esp_zb_device_register().
+*
+*   Side Effects: None. 
+*
+*   \return     Operation status
+*
+*******************************************************************************/
+IDENTIFY_Cluster_Ret_t IDENTIFY_SetupCmdHandler(void);
+
 #endif//_IDENTIFY_CLUSTER_H
