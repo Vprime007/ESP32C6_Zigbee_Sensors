@@ -1,9 +1,12 @@
 /******************************************************************************
 *   Includes
 *******************************************************************************/
+#include <stdbool.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/timers.h"
 
 #include "esp_log.h"
 
@@ -36,6 +39,7 @@
 *******************************************************************************/
 static void shortpressCallback(void *args, void *user_data);
 static void longpressCallback(void *args, void *user_data);
+static void buttonTimerCallback(TimerHandle_t xTimer);
 
 static void tUiTask(void *pvParameters);
 
@@ -49,6 +53,9 @@ static void tUiTask(void *pvParameters);
 *******************************************************************************/
 static TaskHandle_t ui_task_handle = NULL;
 static QueueHandle_t ui_event_queue_handle = NULL;
+static TimerHandle_t ui_button_timer_handle = NULL;
+
+static bool button_enabled = false;
 
 static const char * TAG = "UI";
 
@@ -91,6 +98,12 @@ static void longpressCallback(void *args, void *user_data){
     UI_PostEvent(UI_EVENT_BTN_LONGPRESS, 0);
 }
 
+static void buttonTimerCallback(TimerHandle_t xTimer){
+
+    //Enabled button
+    button_enabled = true;
+}
+
 /***************************************************************************//*!
 *  \brief User Interface main task.
 *
@@ -105,8 +118,12 @@ static void longpressCallback(void *args, void *user_data){
 *******************************************************************************/
 static void tUiTask(void *pvParameters){
 
-    UI_Event_t ui_event;
+    UI_Event_t ui_event; 
     ESP_LOGI(TAG, "Starting UI task");
+
+    UI_PostEvent(UI_EVENT_BOOT, 0);
+    //Start timer for button enabling
+    xTimerStart(ui_button_timer_handle, 10/portTICK_PERIOD_MS);
 
     for(;;){
 
@@ -146,19 +163,41 @@ static void tUiTask(void *pvParameters){
 
                 case UI_EVENT_BTN_SHORTPRESS:
                 {
-                    ESP_LOGI(TAG, "Processing SHORTPRESS event");
-                    //Check zigbee network status
-                    ZIGBEE_Nwk_State_t nwk_state = ZIGBEE_GetNwkState();
-                    if(nwk_state == ZIGBEE_NWK_NOT_CONNECTED){
-                        ZIGBEE_StartScanning();
+                    if(button_enabled){
+
+                        ESP_LOGI(TAG, "Processing SHORTPRESS event");
+                        //Check zigbee network status
+                        ZIGBEE_Nwk_State_t nwk_state = ZIGBEE_GetNwkState();
+                        if(nwk_state == ZIGBEE_NWK_NOT_CONNECTED){
+                            ZIGBEE_StartScanning();
+                        }
+                    }
+                    else{
+                        ESP_LOGI(TAG, "Button disabled");
                     }
                 }
                 break;
 
                 case UI_EVENT_BTN_LONGPRESS:
                 {
-                    ESP_LOGI(TAG, "Processing LONGPRESS event");
-                    ZIGBEE_LeaveNetwork();
+                    if(button_enabled){
+                        
+                        ESP_LOGI(TAG, "Processing LONGPRESS event");
+                        
+                        //Disable the button to prevent interference with factory reset
+                        button_enabled = false;
+
+                        LED_StopPattern(LED_PATTERN_CONNECTED);
+                        LED_StopPattern(LED_PATTERN_SCANNING);
+                        LED_StopPattern(LED_PATTERN_IDENTIFY);
+                        LED_StopPattern(LED_PATTERN_NO_COORDO);
+                        LED_StartPattern(LED_PATTERN_FACTORY_RESET);
+
+                        ZIGBEE_LeaveNetwork();
+                    }
+                    else{
+                        ESP_LOGI(TAG, "Button disabled");
+                    }
                 }
                 break;
 
@@ -252,6 +291,21 @@ UI_Ret_t UI_Init(void){
     //Init led controller
     if(LED_STATUS_OK != LED_InitController()){
         ESP_LOGI(TAG, "Failed to init leds controller");
+        return UI_STATUS_ERROR;
+    }
+
+    //Disabled button until boot sequence is done
+    button_enabled = false;
+
+    //Create button enable timer
+    ui_button_timer_handle = xTimerCreate("Btn timer",
+                                          5000/portTICK_PERIOD_MS,
+                                          pdFALSE,
+                                          NULL,
+                                          buttonTimerCallback);
+
+    if(ui_button_timer_handle == NULL){
+        ESP_LOGI(TAG, "Failed to create button timer");
         return UI_STATUS_ERROR;
     }
 

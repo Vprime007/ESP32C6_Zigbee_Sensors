@@ -25,7 +25,7 @@
 #define NETWORK_STATE_NVS                   ("NetworkState")
 
 #define NETWORK_STEERING_ATTEMPTS           (10)
-#define NETWORK_LEAVE_DELAY_MS              (4000)
+#define NETWORK_LEAVE_DELAY_MS              (5000)
 #define NETWORK_COORDO_DETECT_PERIOD_MS     (30 * 1000)
 #define NETWORK_COORD_DETECT_TIMEOUT_MS     (5 * 1000)
 

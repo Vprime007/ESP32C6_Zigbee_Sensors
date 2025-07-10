@@ -6,8 +6,8 @@
 *******************************************************************************/
 #define HWI_AHT10_SDA_GPIO              (6)
 #define HWI_AHT10_SCL_GPIO              (7)
-#define HWI_RED_LED_GPIO                (19)
-#define HWI_GREEN_LED_GPIO              (18)
+#define HWI_RED_LED_GPIO                (1)
+#define HWI_GREEN_LED_GPIO              (0)
 #define HWI_USER_BUTTON_GPIO            (9)
 
 /******************************************************************************

@@ -28,10 +28,10 @@
 *   Private Data Types
 *******************************************************************************/
 typedef enum LED_Pattern_Flag_e{
-    LED_FLAG_SCANNING = 0x0000,
-    LED_FLAG_CONNECTED = 0x0001,
-    LED_FLAG_NO_COORDO = 0x0002,
-    LED_FLAG_IDENTIFY = 0x0004,
+    LED_FLAG_SCANNING = 0x0001,
+    LED_FLAG_CONNECTED = 0x0002,
+    LED_FLAG_NO_COORDO = 0x0004,
+    LED_FLAG_IDENTIFY = 0x0008,
 }LED_Pattern_Flag_t;
 
 /******************************************************************************
@@ -337,23 +337,6 @@ static void processGreenLedEvent(void){
         }
         break;
 
-        case LED_PATTERN_FACTORY_RESET:
-        {
-            xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
-            green_led_current_pattern = LED_PATTERN_INVALID;
-            xSemaphoreGive(led_mutex_handle);
-
-            //Start sequence
-            prev_flag = 0;
-            SEQUENCER_DoSequence(SEQUENCE_ID_GREEN_LED, &seq_factory_reset);
-
-            //Schedule led update after the sequence
-            xTimerStop(green_led_timer_handle, 10/portTICK_PERIOD_MS);
-            xTimerChangePeriod(green_led_timer_handle, (5000+500)/portTICK_PERIOD_MS, 10/portTICK_PERIOD_MS);
-            xTimerStart(green_led_timer_handle, 10/portTICK_PERIOD_MS);
-        }
-        break;
-
         case LED_PATTERN_INVALID:
         default:
         {
@@ -484,6 +467,14 @@ LED_Ret_t LED_InitController(void){
         return LED_STATUS_ERROR;
     }
 
+    red_led_current_pattern = LED_PATTERN_INVALID;
+    red_led_buffered_pattern = LED_PATTERN_INVALID;
+    red_led_flag = 0;
+
+    green_led_current_pattern = LED_PATTERN_INVALID;
+    green_led_buffered_pattern = LED_PATTERN_INVALID;
+    green_led_flag = 0;
+
     //create sequencer task
     if(pdTRUE != xTaskCreate(tSequencerTask,
                              "Seq Task",
@@ -562,18 +553,13 @@ LED_Ret_t LED_StartPattern(LED_Pattern_t pattern){
             xSemaphoreTake(led_mutex_handle, portMAX_DELAY);
             red_led_current_pattern = LED_PATTERN_FACTORY_RESET;
             red_led_buffered_pattern = LED_PATTERN_FACTORY_RESET;
-
-            green_led_current_pattern = LED_PATTERN_FACTORY_RESET;
-            green_led_buffered_pattern = LED_PATTERN_FACTORY_RESET;
             xSemaphoreGive(led_mutex_handle);
 
             //Stop any running timer
             xTimerStop(red_led_timer_handle, 10/portTICK_PERIOD_MS);
-            xTimerStop(green_led_timer_handle, 10/portTICK_PERIOD_MS);
 
             //Notify the task to apply new pattern
             xSemaphoreGive(red_led_semph_handle);
-            xSemaphoreGive(green_led_semph_handle);
         }
         break;
 
