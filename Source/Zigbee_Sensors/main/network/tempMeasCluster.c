@@ -140,9 +140,11 @@ TEMP_Cluster_Ret_t TEMP_SetupReporting(void){
 *******************************************************************************/
 TEMP_Cluster_Ret_t TEMP_SetTemperature(int16_t temperature){
 
-    //Clip temperature measurement
-    if(temperature >= MAX_TEMPERATURE_VALUE)    temperature = MAX_TEMPERATURE_VALUE;
-    if(temperature <= MIN_TEMPERATURE_VALUE)    temperature = MIN_TEMPERATURE_VALUE;
+    if(temperature != INVALID_TEMPERATURE_VALUE){
+        //Clip temperature measurement
+        if(temperature >= MAX_TEMPERATURE_VALUE)    temperature = MAX_TEMPERATURE_VALUE;
+        if(temperature <= MIN_TEMPERATURE_VALUE)    temperature = MIN_TEMPERATURE_VALUE;
+    }
 
     //Update attribute value
     esp_zb_zcl_status_t ret;

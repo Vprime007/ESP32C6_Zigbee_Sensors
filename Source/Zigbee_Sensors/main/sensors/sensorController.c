@@ -12,16 +12,20 @@
 #include "sensorController.h"
 #include "aht10.h"
 #include "zigbeeManager.h"
+#include "tempMeasCluster.h"
+#include "humidityMeasCluster.h"
 #include "main.h"
 
 /******************************************************************************
 *   Private Definitions
 *******************************************************************************/
-#define LOG_LOCAL_LEVEL                 (ESP_LOG_INFO)
-
 #define INTER_STEP_DELAY_MS             (25)
 #define INITIAL_DELAY_MS                (10 * 1000)
 #define SENSOR_LOOP_PERIOD_MS           (1 * 1000)
+#define NB_TEMPERATURE_SAMPLE           (8)
+#define NB_HUMIDITY_SAMPLE              (8)
+
+#define LOG_LOCAL_LEVEL                 (ESP_LOG_INFO)
 
 /******************************************************************************
 *   Private Macros
@@ -79,6 +83,14 @@ static void tSensorTask(void *pvParameters){
 
     ESP_LOGI(TAG, "Starting Sensor task");
 
+    static uint8_t temp_avg_cptr = 0;
+    static uint8_t temp_invalid_cptr = 0;
+    static int32_t temp_cumul = 0;
+
+    static uint8_t rh_avg_cptr = 0;
+    static uint8_t rh_invalid_cptr = 0;
+    static uint32_t rh_cumul = 0;
+
     vTaskDelay(INITIAL_DELAY_MS/portTICK_PERIOD_MS);
 
     for(;;){
@@ -110,22 +122,57 @@ static void tSensorTask(void *pvParameters){
                     ESP_LOGI(TAG, "Failed to get last temperature");
                     temperature = AHT10_INVALID_TEMPERATURE;
                 }
-                else{
-                    //Format temperature for zigbee cluster
-                    temperature *= 100;
+
+                if(temperature != (int16_t)AHT10_INVALID_TEMPERATURE){
+                    //Reset invalid temp cptr
+                    temp_invalid_cptr = 0;
+
+                    //Check if we need to update zigbee attrib
+                    if(temp_avg_cptr >= NB_TEMPERATURE_SAMPLE){
+                        //Calculate the average
+                        temp_cumul /= NB_TEMPERATURE_SAMPLE;
+                        temperature = (int16_t)temp_cumul;
+
+                        //Reset average temperature
+                        temp_cumul = 0;
+                        temp_avg_cptr = 0;
+
+                        ESP_LOGI(TAG, "Temperature: %d *C", temperature);
+
+                        //Update zigbee attrib with new value
+                        if(TEMP_CLUSTER_STATUS_OK != TEMP_SetTemperature(temperature)){
+                            ESP_LOGI(TAG, "Failed to update zigbee attrib");
+                        }
+                    }
+                    else{
+                        //Increment avg temp cptr
+                        temp_avg_cptr++;
+                        temp_cumul += temperature;
+                    }
                 }
+                else{
+                    //Reset avg temp cptr
+                    temp_avg_cptr = 0;
+                    //Reset avg temp value
+                    temp_cumul = 0;
 
-                ESP_LOGI(TAG, "Temperature: %d *C", temperature);
+                    //Check if we need to update zigbee attrib
+                    if(temp_invalid_cptr >= NB_TEMPERATURE_SAMPLE){
+                        //Reset invalid temp cptr
+                        temp_invalid_cptr = 0;
 
-                //Store new value in zigbee cluster
-                esp_zb_lock_acquire(portMAX_DELAY);
-                esp_zb_zcl_set_attribute_val(ZIGBEE_ENDPOINT_1, 
-                                             ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT,
-                                             ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
-                                             ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID,
-                                             &temperature,
-                                             false);
-                esp_zb_lock_release();
+                        ESP_LOGI(TAG, "Temperature: %d *C", temperature);
+
+                        //Update zigbee attrib with invalid value
+                        if(TEMP_CLUSTER_STATUS_OK != TEMP_SetTemperature(temperature)){
+                            ESP_LOGI(TAG, "Failed to update zigbee attrib");
+                        }                    
+                        else{
+                        //Increment invalid temp cptr
+                        temp_invalid_cptr++;
+                        }
+                    }
+                }
 
                 //Set next step
                 sensor_step = SENSOR_STEP_PROCESS_HUMIDITY;
@@ -140,22 +187,58 @@ static void tSensorTask(void *pvParameters){
                     ESP_LOGI(TAG, "Failed to get last humidity");
                     humidity = AHT10_INVALID_HUMIDITY;
                 }
-                else{
-                    //Format humidity for zigbee cluster
-                    humidity *= 100;
+
+                if(humidity != AHT10_INVALID_HUMIDITY){
+                    //Reset invalid humidity cptr
+                    rh_invalid_cptr = 0;
+
+                    //Check if we need to update zigbee attrib
+                    if(rh_avg_cptr >= NB_HUMIDITY_SAMPLE){
+                        //Calculate te average
+                        rh_cumul /= NB_HUMIDITY_SAMPLE;
+                        humidity = (uint16_t)rh_cumul;
+
+                        //Reset average rh
+                        rh_cumul = 0;
+                        rh_avg_cptr = 0;
+
+                        ESP_LOGI(TAG, "Humidity: %d", humidity);
+
+                        //Update zigbee attrib with new value
+                        if(HUMIDITY_CLUSTER_STATUS_OK != HUMIDITY_SetRelHumidity(humidity)){
+                            ESP_LOGI(TAG, "Failed to update zigbee attrib");
+                        }
+                    }
+                    else{
+                        //Increment avg cptr
+                        rh_avg_cptr++;
+                        rh_cumul += humidity;
+                    }
                 }
+                else{
+                    //Reset avg rh cptr
+                    rh_avg_cptr = 0;
+                    //Reset cumul value
+                    rh_avg_cptr = 0;
 
-                ESP_LOGI(TAG, "Humidity: %d", humidity);
+                    //Check if we need to update zigbee attrib
+                    if(rh_invalid_cptr >= NB_HUMIDITY_SAMPLE){
+                        //Reset invalid rh cptr
+                        rh_invalid_cptr = 0;
 
-                //Store new value in zigbee cluster
-                esp_zb_lock_acquire(portMAX_DELAY);
-                esp_zb_zcl_set_attribute_val(ZIGBEE_ENDPOINT_1, 
-                                             ESP_ZB_ZCL_CLUSTER_ID_REL_HUMIDITY_MEASUREMENT,
-                                             ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
-                                             ESP_ZB_ZCL_ATTR_REL_HUMIDITY_MEASUREMENT_VALUE_ID,
-                                             &humidity,
-                                             false);
-                esp_zb_lock_release();
+                        //Update zigbee attrib with invalid value
+                        ESP_LOGI(TAG, "Humidity: %d", humidity);
+
+                        //Update zigbee attrib with new value
+                        if(HUMIDITY_CLUSTER_STATUS_OK != HUMIDITY_SetRelHumidity(humidity)){
+                            ESP_LOGI(TAG, "Failed to update zigbee attrib");
+                        }
+                    }
+                    else{
+                        //Increment invalid rh cptr
+                        rh_invalid_cptr++;
+                    }
+                }
 
                 //Set next step
                 sensor_step = SENSOR_STEP_IDLE;

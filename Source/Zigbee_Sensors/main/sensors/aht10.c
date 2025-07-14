@@ -159,12 +159,14 @@ AHT10_Ret_t AHT10_StartMeasurement(void){
     //Process recv buffer
     xSemaphoreTake(aht10_mutex_handle, portMAX_DELAY);
 
-    uint32_t raw_temperature = ((recv_buffer[3] & 0x0F) << 16) | (recv_buffer[4] << 8) | (recv_buffer[5]);
+    uint64_t raw_temperature = ((recv_buffer[3] & 0x0F) << 16) | (recv_buffer[4] << 8) | (recv_buffer[5]);
     raw_temperature *= 200;
+    raw_temperature *= 100;
     raw_temperature /= 0x100000;
-    current_temp = (int16_t)(raw_temperature - 50);
+    current_temp = (int16_t)(raw_temperature - (50*100));
 
-    uint32_t raw_humidity = (recv_buffer[1] << 12) | (recv_buffer[2] << 4) | (recv_buffer[3] >> 4);
+    uint64_t raw_humidity = (recv_buffer[1] << 12) | (recv_buffer[2] << 4) | (recv_buffer[3] >> 4);
+    raw_humidity *= 100;
     raw_humidity *= 100;
     raw_humidity /= 0x100000;
     current_humidity = (uint16_t)(raw_humidity);

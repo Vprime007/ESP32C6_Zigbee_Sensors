@@ -159,9 +159,12 @@ HUMIDITY_Cluster_Ret_t HUMIDITY_SetupReporting(void){
 *******************************************************************************/
 HUMIDITY_Cluster_Ret_t HUMIDITY_SetRelHumidity(uint16_t rel_humidity){
 
-    //Clip humidity value
-    if(rel_humidity >= MAX_RELATIVE_HUMIDITY_LEVEL)     rel_humidity = MAX_RELATIVE_HUMIDITY_LEVEL;
-    if(rel_humidity <= MIN_RELATIVE_HUMIDITY_LEVEL)     rel_humidity = MIN_RELATIVE_HUMIDITY_LEVEL;     
+    
+    if(rel_humidity != INVALID_RELATIVE_HUMIDITY_LEVEL){
+        //Clip humidity value
+        if(rel_humidity >= MAX_RELATIVE_HUMIDITY_LEVEL)     rel_humidity = MAX_RELATIVE_HUMIDITY_LEVEL;
+        if(rel_humidity <= MIN_RELATIVE_HUMIDITY_LEVEL)     rel_humidity = MIN_RELATIVE_HUMIDITY_LEVEL;  
+    }   
 
     //Update attribute value
     esp_zb_zcl_status_t ret;
