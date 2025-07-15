@@ -138,6 +138,18 @@ static void sendIeeeAddrReqCallback(uint8_t param){
     xTimerStart(ieee_req_timer_handle, 10/portTICK_PERIOD_MS);
 }
 
+/***************************************************************************//*!
+*  \brief IEEE address response timeout.
+*
+*   This function is called when the IEEE address request timeout occur.
+*   
+*   Preconditions: Zigbee stack is initialized.
+*
+*   Side Effects: None.
+*
+*   \param[in]  xTimer              Timer handle.
+*
+*******************************************************************************/
 static void ieeeAddrResponseTimeout(TimerHandle_t xTimer){
 
     ESP_LOGI(TAG, "IEEE address request timeout");
