@@ -11,7 +11,7 @@
 *******************************************************************************/
 #define HUMIDITY_MEAS_REPORT_MIN_INTERVAL_S     (10)
 #define HUMIDITY_MEAS_REPORT_MAX_INTERVAL_S     (3600)
-#define HUMIDITY_MEAS_REPORT_DELTA              (100)
+#define HUMIDITY_MEAS_REPORT_DELTA              (500)
 
 #define LOG_LOCAL_LEVEL                         (ESP_LOG_INFO)
 

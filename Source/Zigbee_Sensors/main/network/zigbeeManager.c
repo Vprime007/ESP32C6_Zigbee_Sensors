@@ -2,6 +2,7 @@
 *   Includes
 *******************************************************************************/
 #include <string.h>
+#include <stdbool.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -21,15 +22,16 @@
 /******************************************************************************
 *   Private Definitions
 *******************************************************************************/
-#define NETWORK_NVS_NAMESPACE               ("Network")
-#define NETWORK_STATE_NVS                   ("NetworkState")
+#define NWK_NVS_NAMESPACE                           ("Network")
+#define NWK_STATE_NVS                               ("NetworkState")
 
-#define NETWORK_STEERING_ATTEMPTS           (10)
-#define NETWORK_LEAVE_DELAY_MS              (5000)
-#define NETWORK_COORDO_DETECT_PERIOD_MS     (30 * 1000)
-#define NETWORK_COORD_DETECT_TIMEOUT_MS     (5 * 1000)
+#define NWK_STEERING_ATTEMPTS                       (10)
+#define NWK_LEAVE_DELAY_MS                          (5000)
+#define NWK_INITIAL_COORDO_DETECT_PERIOD_MS         (1 * 1000)
+#define NWK_COORDO_DETECT_PERIOD_MS                 (30 * 1000)
+#define NWK_COORD_DETECT_TIMEOUT_MS                 (5 * 1000)
 
-#define LOG_LOCAL_LEVEL                     (ESP_LOG_INFO)
+#define LOG_LOCAL_LEVEL                             (ESP_LOG_INFO)
 
 /******************************************************************************
 *   Private Macros
@@ -68,6 +70,7 @@ static void tZigbeeTask(void *pvParameters);
 static ZIGBEE_Nwk_State_t network_state = ZIGBEE_NWK_INVALID;
 static uint8_t network_steering_attempt = 0;
 static networkStateChangeCallback_t nwk_state_change_callback;
+static bool connected_at_boot = false;
 
 static TaskHandle_t zigbee_task_handle = NULL;
 static SemaphoreHandle_t zigbee_mutex_handle = NULL;
@@ -221,7 +224,7 @@ static void ieeeAddrResponseCallback(esp_zb_zdp_status_t zdo_status,
     //re-schedule a IEEE addr request
     esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReqCallback, 
                            0, 
-                           NETWORK_COORDO_DETECT_PERIOD_MS);
+                           NWK_COORDO_DETECT_PERIOD_MS);
 }
 
 /***************************************************************************//*!
@@ -244,13 +247,13 @@ static void updateNetworkState(ZIGBEE_Nwk_State_t state){
     else{
 
         nvs_handle_t nvs_handle;
-        esp_err_t nvs_err = nvs_open(NETWORK_NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+        esp_err_t nvs_err = nvs_open(NWK_NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
         if(nvs_err != ESP_OK){
             ESP_LOGI(TAG, "Failed to open NVS");
         }
         else{
             //Store new value in NVS
-            nvs_set_u8(nvs_handle, NETWORK_STATE_NVS, state);
+            nvs_set_u8(nvs_handle, NWK_STATE_NVS, state);
             nvs_commit(nvs_handle);
             nvs_close(nvs_handle);
 
@@ -304,13 +307,13 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
                 //Schedule a IEEE addr request
                 esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReqCallback, 
                                        0, 
-                                       NETWORK_COORDO_DETECT_PERIOD_MS);
+                                       NWK_COORDO_DETECT_PERIOD_MS);
             }
             else{
 
                 ESP_LOGI(TAG, "Network steering was not successful (status: %s)", esp_err_to_name(err_status));
 
-                if(network_steering_attempt < NETWORK_STEERING_ATTEMPTS-1){
+                if(network_steering_attempt < NWK_STEERING_ATTEMPTS-1){
                     network_steering_attempt++;//Increment attempts cptr
                     ESP_LOGI(TAG, "Network Steering attempt: %d", network_steering_attempt);
                     //Schedule a new network steering attempt
@@ -328,6 +331,19 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct){
                         nwk_state_change_callback(network_state);
                     }
                 }
+            }
+        }
+        break;
+
+        case ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT:
+        {
+            if(connected_at_boot){
+                connected_at_boot = false;
+                ESP_LOGI(TAG, "Scheduling reboot coordo check");
+                //Schedule a IEEE addr request
+                esp_zb_scheduler_alarm((esp_zb_callback_t)sendIeeeAddrReqCallback, 
+                                       0, 
+                                       NWK_INITIAL_COORDO_DETECT_PERIOD_MS);
             }
         }
         break;
@@ -397,7 +413,7 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(networkStateChangeCallback_t nwk_change_callback){
 
     //Create ieee request timer
     ieee_req_timer_handle = xTimerCreate("IEEE_TIMER",
-                                         NETWORK_COORD_DETECT_TIMEOUT_MS/portTICK_PERIOD_MS,
+                                         NWK_COORD_DETECT_TIMEOUT_MS/portTICK_PERIOD_MS,
                                          pdFALSE,
                                          NULL,
                                          ieeeAddrResponseTimeout);
@@ -412,26 +428,26 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(networkStateChangeCallback_t nwk_change_callback){
     //Restore network state from NVS
     ZIGBEE_Nwk_State_t tmp_nwk_state = ZIGBEE_NWK_INVALID;
     nvs_handle_t nvs_handle;
-    esp_err_t nvs_err = nvs_open(NETWORK_NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    esp_err_t nvs_err = nvs_open(NWK_NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
     if(nvs_err != ESP_OK){
         ESP_LOGI(TAG, "Failed to open nvs");
         return ZIGBEE_STATUS_ERROR;
     }
 
-    nvs_err = nvs_get_u8(nvs_handle, NETWORK_STATE_NVS, (uint8_t*)&tmp_nwk_state);
+    nvs_err = nvs_get_u8(nvs_handle, NWK_STATE_NVS, (uint8_t*)&tmp_nwk_state);
     if(nvs_err == ESP_ERR_NVS_NOT_FOUND){
         ESP_LOGI(TAG, "Zigbee Nwk state must be init in NVS");
-        nvs_set_u8(nvs_handle, NETWORK_STATE_NVS, ZIGBEE_NWK_NOT_CONNECTED);
+        nvs_set_u8(nvs_handle, NWK_STATE_NVS, ZIGBEE_NWK_NOT_CONNECTED);
         nvs_commit(nvs_handle);
     }
 
-    nvs_get_u8(nvs_handle, NETWORK_STATE_NVS, (uint8_t*)&tmp_nwk_state);
+    nvs_get_u8(nvs_handle, NWK_STATE_NVS, (uint8_t*)&tmp_nwk_state);
 
     //If network state is in an invalid boot state -> set to NOT_CONNECTED
     if((tmp_nwk_state != ZIGBEE_NWK_CONNECTED) && (tmp_nwk_state != ZIGBEE_NWK_NOT_CONNECTED)){
         tmp_nwk_state = ZIGBEE_NWK_NOT_CONNECTED;
 
-        nvs_set_u8(nvs_handle, NETWORK_STATE_NVS, tmp_nwk_state);
+        nvs_set_u8(nvs_handle, NWK_STATE_NVS, tmp_nwk_state);
         nvs_commit(nvs_handle);
     }
 
@@ -440,10 +456,19 @@ ZIGBEE_Ret_t ZIGBEE_InitStack(networkStateChangeCallback_t nwk_change_callback){
     //Update network state with value stored in NVS
     xSemaphoreTake(zigbee_mutex_handle, portMAX_DELAY);
     network_state = tmp_nwk_state;
+    if(network_state == ZIGBEE_NWK_CONNECTED || 
+       network_state == ZIGBEE_NWK_NO_PARENT){
+
+        connected_at_boot = true;
+    }
     xSemaphoreGive(zigbee_mutex_handle);
 
     //Register network state change callback
-    if(nwk_change_callback != NULL)     nwk_state_change_callback = nwk_change_callback;
+    if(nwk_change_callback != NULL){
+        nwk_state_change_callback = nwk_change_callback;
+        //Call it with initial nwk state
+        nwk_state_change_callback(network_state);
+    }     
 
     //Platform config
     esp_zb_platform_config_t config = {
@@ -612,7 +637,7 @@ void ZIGBEE_LeaveNetwork(void){
 
     esp_zb_scheduler_alarm((esp_zb_callback_t)leaveNetworkCallback, 
                            0, 
-                           NETWORK_LEAVE_DELAY_MS);
+                           NWK_LEAVE_DELAY_MS);
 }
 
 /***************************************************************************//*!

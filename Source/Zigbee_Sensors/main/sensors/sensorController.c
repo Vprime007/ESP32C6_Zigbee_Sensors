@@ -21,7 +21,7 @@
 *******************************************************************************/
 #define INTER_STEP_DELAY_MS             (25)
 #define INITIAL_DELAY_MS                (10 * 1000)
-#define SENSOR_LOOP_PERIOD_MS           (1 * 1000)
+#define SENSOR_LOOP_PERIOD_MS           (250)
 #define NB_TEMPERATURE_SAMPLE           (8)
 #define NB_HUMIDITY_SAMPLE              (8)
 
