@@ -65,6 +65,23 @@ static const char * TAG = "AHT10";
 /******************************************************************************
 *   Public Functions Definitions
 *******************************************************************************/
+/***************************************************************************//*!
+*  \brief AHT10 initialization.
+*
+*   Initialize the AHT10 interface and peripheral. A wait function must 
+*   be passed as parameter for the AHT10 to measure properly.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  scl_gpio            I2C SCL gpio.
+*   \param[in]  sda_gpio            I2C SDA gpio.
+*   \param[in]  wait_function       Wait function.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
 AHT10_Ret_t AHT10_Init(uint8_t scl_gpio, 
                        uint8_t sda_gpio, 
                        WaitMsFunction_t wait_function){
@@ -123,6 +140,19 @@ AHT10_Ret_t AHT10_Init(uint8_t scl_gpio,
     return AHT10_STATUS_OK;
 }
 
+/***************************************************************************//*!
+*  \brief Start AHT10 measurement.
+*
+*   Start measurement process and read back the temperature/humidity values
+*   from the AHT10 sensor.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
 AHT10_Ret_t AHT10_StartMeasurement(void){
 
     uint8_t cmd_to_send[] = {AHT10_CMD_MEAS, 0x33, 0x00};
@@ -159,12 +189,14 @@ AHT10_Ret_t AHT10_StartMeasurement(void){
     //Process recv buffer
     xSemaphoreTake(aht10_mutex_handle, portMAX_DELAY);
 
-    uint32_t raw_temperature = ((recv_buffer[3] & 0x0F) << 16) | (recv_buffer[4] << 8) | (recv_buffer[5]);
+    uint64_t raw_temperature = ((recv_buffer[3] & 0x0F) << 16) | (recv_buffer[4] << 8) | (recv_buffer[5]);
     raw_temperature *= 200;
+    raw_temperature *= 100;
     raw_temperature /= 0x100000;
-    current_temp = (int16_t)(raw_temperature - 50);
+    current_temp = (int16_t)(raw_temperature - (50*100));
 
-    uint32_t raw_humidity = (recv_buffer[1] << 12) | (recv_buffer[2] << 4) | (recv_buffer[3] >> 4);
+    uint64_t raw_humidity = (recv_buffer[1] << 12) | (recv_buffer[2] << 4) | (recv_buffer[3] >> 4);
+    raw_humidity *= 100;
     raw_humidity *= 100;
     raw_humidity /= 0x100000;
     current_humidity = (uint16_t)(raw_humidity);
@@ -174,6 +206,20 @@ AHT10_Ret_t AHT10_StartMeasurement(void){
     return AHT10_STATUS_OK;
 }
 
+/***************************************************************************//*!
+*  \brief Get the last temperature measurement.
+*
+*   Return the last valid temperature measurement result for the AHT10.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  pTemperature         Pointer to store the temperature value.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
 AHT10_Ret_t AHT10_GetLastTemperature(int16_t *pTemperature){
 
     //Check if param is valid 
@@ -192,6 +238,20 @@ AHT10_Ret_t AHT10_GetLastTemperature(int16_t *pTemperature){
     return AHT10_STATUS_OK;
 }
 
+/***************************************************************************//*!
+*  \brief Get the last humidity measurement.
+*
+*   Return the last valid humidity measurement result for the AHT10.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  pTemperature         Pointer to store the humidity value.
+*
+*   \return     Operation status
+*
+*******************************************************************************/
 AHT10_Ret_t AHT10_GetLastHumidity(uint16_t *pHumidity){
 
     //Check if param is valid

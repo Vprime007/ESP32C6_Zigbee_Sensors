@@ -98,6 +98,19 @@ static void longpressCallback(void *args, void *user_data){
     UI_PostEvent(UI_EVENT_BTN_LONGPRESS, 0);
 }
 
+/***************************************************************************//*!
+*  \brief Button timer callback.
+*
+*   Function called after button activation delay has expired.
+*   It enable button event processing.
+*   
+*   Preconditions: None.
+*
+*   Side Effects: None.
+*
+*   \param[in]  xTimer              Timer handle
+*
+*******************************************************************************/
 static void buttonTimerCallback(TimerHandle_t xTimer){
 
     //Enabled button
