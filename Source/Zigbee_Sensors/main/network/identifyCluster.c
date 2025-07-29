@@ -6,6 +6,7 @@
 
 #include "identifyCluster.h"
 #include "zigbeeManager.h"
+#include "userInterface.h"
 
 /******************************************************************************
 *   Private Definitions
@@ -45,10 +46,12 @@ static void identifyCallback(uint8_t identify_on){
     if(identify_on >= 1){
         //Start identifying
         ESP_LOGI(TAG, "Start identifying");
+        UI_PostEvent(UI_EVENT_START_IDENTIFY, 0);
     }
     else{
         //Stop identifying
         ESP_LOGI(TAG, "Stop identifying");
+        UI_PostEvent(UI_EVENT_STOP_IDENTIFY, 0);
     }
 }
 
